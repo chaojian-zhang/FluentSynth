@@ -12,7 +12,7 @@ namespace FluentSynth
         /// <summary>
         /// Path of the sound font file for MIDI synth
         /// </summary>
-        public string SoundFontFilepath { get; }
+        public string SoundFontFilePath { get; }
         #endregion
 
         #region Constructor
@@ -22,7 +22,7 @@ namespace FluentSynth
         /// </summary>
         public Synth(string sounfFontFilePath = null)
         {
-            SoundFontFilepath = sounfFontFilePath;
+            SoundFontFilePath = sounfFontFilePath;
         }
         #endregion
 
@@ -1488,47 +1488,20 @@ namespace FluentSynth
         public WaveOutEvent Play(Score score)
         {
             int sampleRate = DefaultSampleRate;
-            Synthesizer synthesizer = new(SoundFontFilepath, sampleRate);
 
-            double measureSizeInSeconds = (double)score.BeatsPerMeasure / score.BPM * 60;
-            int totalSeconds = (int)Math.Ceiling(score.Measures.Length * measureSizeInSeconds);  // TODO: May have alignment problem
-            int measureSizeInFloats = (int)(measureSizeInSeconds * sampleRate);  // TODO: May have alignment problem
-            int beatSizeInFloats = measureSizeInFloats / score.BeatsPerMeasure;
-
-            // The output buffer
-            int totalSamples = totalSeconds * sampleRate;
-            float[] left = new float[totalSamples];
-            float[] right = new float[totalSamples];
-
-            for (int m = 0; m < score.Measures.Length; m++)
-            {
-                Measure measure = score.Measures[m];
-                int spanStartIndex = (int)(m * measureSizeInSeconds * sampleRate); // TODO: May have alignment problem
-                
-                foreach (MeasureSection section in measure.Sections)
-                {
-                    synthesizer.ProcessMidiMessage(0, 0xC0, section.MIDIInstrument, 0); // Send a program change command (0xC0) to the synthesizer in order to change instrument
-                    foreach (Beat beat in section.Beats)
-                    {
-                        foreach (int note in beat.Notes)
-                        {
-                            synthesizer.NoteOn(0, note, beat.Velocity); // Signature: Channel (0 for both), key, velocity
-                        }
-
-                        synthesizer.Render(new Span<float>(left, spanStartIndex, beatSizeInFloats), new Span<float>(right, spanStartIndex, beatSizeInFloats));
-                    }
-                }
-            }
+            new Orchestrator(sampleRate, SoundFontFilePath)
+                .Orchestrate(score, out float[] left, out float[] right);
 
             return Play(sampleRate, left, right);
         }
+
         /// <summary>
         /// Play specific MIDI file
         /// </summary>
         public WaveOutEvent PlayMIDIFile(string filePath)
         {
             int sampleRate = DefaultSampleRate;
-            Synthesizer synthesizer = new(SoundFontFilepath, sampleRate);
+            Synthesizer synthesizer = new(SoundFontFilePath, sampleRate);
             MidiFile midiFile = new(filePath);
 
             MidiFileSequencer sequencer = new(synthesizer);

@@ -60,6 +60,9 @@
         /// </summary>
         public static Dictionary<string, int> NoteNameMapping { get; } = new()
         {
+            // Special Beats
+            { "_", -1 },
+
             // Simplified Names
             { "B", Synth.B4 },
             { "A#", Synth.As4 },
@@ -363,6 +366,9 @@
         #endregion
 
         #region Methods
+        /// <summary>
+        /// Parse a script into score.
+        /// </summary>
         public static Score Parse(string scoreScript)
         {
             Measure[] measures = scoreScript
