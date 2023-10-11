@@ -1,4 +1,6 @@
-﻿namespace FluentSynth
+﻿using System.Text.RegularExpressions;
+
+namespace FluentSynth
 {
     /// <summary>
     /// Plays a single beat, potentially as a chord
@@ -52,6 +54,10 @@
         public Measure[] Measures;
     }
 
+    /// <summary>
+    /// Provides parsing for musical score written in plain text;
+    /// The format is roughly a modified version of Guido Music Notation.
+    /// </summary>
     public static class MusicalScoreParser
     {
         #region Mapping
@@ -64,150 +70,213 @@
             { "_", -1 },
 
             // Simplified Names
+            { "A'", Synth.A5 },
+            { "B'", Synth.B5 },
+            { "C'", Synth.C5 },
+            { "D'", Synth.D5 },
+            { "E'", Synth.E5 },
+            { "F'", Synth.F5 },
+            { "G'", Synth.G5 },
+            { "A_", Synth.A5 },
+            { "B_", Synth.B5 },
+            { "C_", Synth.C5 },
+            { "D_", Synth.D5 },
+            { "E_", Synth.E5 },
+            { "F_", Synth.F5 },
+            { "G_", Synth.G5 },
             { "B", Synth.B4 },
             { "A#", Synth.As4 },
-            { "Bb", Synth.Bb4 },
+            { "B&", Synth.Bb4 },
             { "A", Synth.A4 },
             { "G#", Synth.Gs4 },
-            { "Ab", Synth.Ab4 },
+            { "A&", Synth.Ab4 },
             { "G", Synth.G4 },
             { "F#", Synth.Fs4 },
-            { "Gb", Synth.Gb4 },
+            { "G&", Synth.Gb4 },
             { "F", Synth.F4 },
             { "E", Synth.E4 },
             { "D#", Synth.Ds4 },
-            { "Eb", Synth.Eb4 },
+            { "E&", Synth.Eb4 },
             { "D", Synth.D4 },
             { "C#", Synth.Cs4 },
-            { "Db", Synth.Db4 },
+            { "D&", Synth.Db4 },
             { "C", Synth.C4 },
+
+            // Solfège in the key of C, spanning three octaves
+            { "do", Synth.C4 },
+            { "re", Synth.D4 },
+            { "mi", Synth.E4 },
+            { "fa", Synth.F4 },
+            { "sol", Synth.G4 },
+            { "la", Synth.A4 },
+            { "ti", Synth.B4 },
+            { "si", Synth.B4 },
+            { "do'", Synth.C5 },
+            { "re'", Synth.D5 },
+            { "mi'", Synth.E5 },
+            { "fa'", Synth.F5 },
+            { "sol'", Synth.G5 },
+            { "la'", Synth.A5 },
+            { "ti'", Synth.B5 },
+            { "si'", Synth.B5 },
+            { "do_", Synth.C5 },
+            { "re_", Synth.D5 },
+            { "mi_", Synth.E5 },
+            { "fa_", Synth.F5 },
+            { "sol_", Synth.G5 },
+            { "la_", Synth.A5 },
+            { "ti_", Synth.B5 },
+            { "si_", Synth.B5 },
+
+            // Number notations in the key of C, spanning three octaves
+            { "1", Synth.C4 },
+            { "2", Synth.D4 },
+            { "3", Synth.E4 },
+            { "4", Synth.F4 },
+            { "5", Synth.G4 },
+            { "6", Synth.A4 },
+            { "7", Synth.B4 },
+            { "1'", Synth.C5 },
+            { "2'", Synth.D5 },
+            { "3'", Synth.E5 },
+            { "4'", Synth.F5 },
+            { "5'", Synth.G5 },
+            { "6'", Synth.A5 },
+            { "7'", Synth.B5 },
+            { "1_", Synth.C5 },
+            { "2_", Synth.D5 },
+            { "3_", Synth.E5 },
+            { "4_", Synth.F5 },
+            { "5_", Synth.G5 },
+            { "6_", Synth.A5 },
+            { "7_", Synth.B5 },
 
             // Fully Named
             { "C8", Synth.C8 },
             { "B7", Synth.B7 },
             { "A#7", Synth.As7 },
-            { "Bb7", Synth.Bb7 },
+            { "B&7", Synth.Bb7 },
             { "A7", Synth.A7 },
             { "G#7", Synth.Gs7 },
-            { "Ab7", Synth.Ab7 },
+            { "A&7", Synth.Ab7 },
             { "G7", Synth.G7 },
             { "F#7", Synth.Fs7 },
-            { "Gb7", Synth.Gb7 },
+            { "G&7", Synth.Gb7 },
             { "F7", Synth.F7 },
             { "E7", Synth.E7 },
             { "D#7", Synth.Ds7 },
-            { "Eb7", Synth.Eb7 },
+            { "E&7", Synth.Eb7 },
             { "D7", Synth.D7 },
             { "C#7", Synth.Cs7 },
-            { "Db7", Synth.Db7 },
+            { "D&7", Synth.Db7 },
             { "C7", Synth.C7 },
             { "B6", Synth.B6 },
             { "A#6", Synth.As6 },
-            { "Bb6", Synth.Bb6 },
+            { "B&6", Synth.Bb6 },
             { "A6", Synth.A6 },
             { "G#6", Synth.Gs6 },
-            { "Ab6", Synth.Ab6 },
+            { "A&6", Synth.Ab6 },
             { "G6", Synth.G6 },
             { "F#6", Synth.Fs6 },
-            { "Gb6", Synth.Gb6 },
+            { "G&6", Synth.Gb6 },
             { "F6", Synth.F6 },
             { "E6", Synth.E6 },
             { "D#6", Synth.Ds6 },
-            { "Eb6", Synth.Eb6 },
+            { "E&6", Synth.Eb6 },
             { "D6", Synth.D6 },
             { "C#6", Synth.Cs6 },
-            { "Db6", Synth.Db6 },
+            { "D&6", Synth.Db6 },
             { "C6", Synth.C6 },
             { "B5", Synth.B5 },
             { "A#5", Synth.As5 },
-            { "Bb5", Synth.Bb5 },
+            { "B&5", Synth.Bb5 },
             { "A5", Synth.A5 },
             { "G#5", Synth.Gs5 },
-            { "Ab5", Synth.Ab5 },
+            { "A&5", Synth.Ab5 },
             { "G5", Synth.G5 },
             { "F#5", Synth.Fs5 },
-            { "Gb5", Synth.Gb5 },
+            { "G&5", Synth.Gb5 },
             { "F5", Synth.F5 },
             { "E5", Synth.E5 },
             { "D#5", Synth.Ds5 },
-            { "Eb5", Synth.Eb5 },
+            { "E&5", Synth.Eb5 },
             { "D5", Synth.D5 },
             { "C#5", Synth.Cs5 },
-            { "Db5", Synth.Db5 },
+            { "D&5", Synth.Db5 },
             { "C5", Synth.C5 },
             { "B4", Synth.B4 },
             { "A#4", Synth.As4 },
-            { "Bb4", Synth.Bb4 },
+            { "B&4", Synth.Bb4 },
             { "A4", Synth.A4 },
             { "ConcertPitch", Synth.ConcertPitch },
             { "G#4", Synth.Gs4 },
-            { "Ab4", Synth.Ab4 },
+            { "A&4", Synth.Ab4 },
             { "G4", Synth.G4 },
             { "F#4", Synth.Fs4 },
-            { "Gb4", Synth.Gb4 },
+            { "G&4", Synth.Gb4 },
             { "F4", Synth.F4 },
             { "E4", Synth.E4 },
             { "D#4", Synth.Ds4 },
-            { "Eb4", Synth.Eb4 },
+            { "E&4", Synth.Eb4 },
             { "D4", Synth.D4 },
             { "C#4", Synth.Cs4 },
-            { "Db4", Synth.Db4 },
+            { "D&4", Synth.Db4 },
             { "C4", Synth.C4 },
             { "MiddleC", Synth.MiddleC },
             { "B3", Synth.B3 },
             { "A#3", Synth.As3 },
-            { "Bb3", Synth.Bb3 },
+            { "B&3", Synth.Bb3 },
             { "A3", Synth.A3 },
             { "G#3", Synth.Gs3 },
-            { "Ab3", Synth.Ab3 },
+            { "A&3", Synth.Ab3 },
             { "G3", Synth.G3 },
             { "F#3", Synth.Fs3 },
-            { "Gb3", Synth.Gb3 },
+            { "G&3", Synth.Gb3 },
             { "F3", Synth.F3 },
             { "E3", Synth.E3 },
             { "D#3", Synth.Ds3 },
-            { "Eb3", Synth.Eb3 },
+            { "E&3", Synth.Eb3 },
             { "D3", Synth.D3 },
             { "C#3", Synth.Cs3 },
-            { "Db3", Synth.Db3 },
+            { "D&3", Synth.Db3 },
             { "C3", Synth.C3 },
             { "B2", Synth.B2 },
             { "A#2", Synth.As2 },
-            { "Bb2", Synth.Bb2 },
+            { "B&2", Synth.Bb2 },
             { "A2", Synth.A2 },
             { "G#2", Synth.Gs2 },
-            { "Ab2", Synth.Ab2 },
+            { "A&2", Synth.Ab2 },
             { "G2", Synth.G2 },
             { "F#2", Synth.Fs2 },
-            { "Gb2", Synth.Gb2 },
+            { "G&2", Synth.Gb2 },
             { "F2", Synth.F2 },
             { "E2", Synth.E2 },
             { "D#2", Synth.Ds2 },
-            { "Eb2", Synth.Eb2 },
+            { "E&2", Synth.Eb2 },
             { "D2", Synth.D2 },
             { "C#2", Synth.Cs2 },
-            { "Db2", Synth.Db2 },
+            { "D&2", Synth.Db2 },
             { "C2", Synth.C2 },
             { "B1", Synth.B1 },
             { "A#1", Synth.As1 },
-            { "Bb1", Synth.Bb1 },
+            { "B&1", Synth.Bb1 },
             { "A1", Synth.A1 },
             { "G#1", Synth.Gs1 },
-            { "Ab1", Synth.Ab1 },
+            { "A&1", Synth.Ab1 },
             { "G1", Synth.G1 },
             { "F#1", Synth.Fs1 },
-            { "Gb1", Synth.Gb1 },
+            { "G&1", Synth.Gb1 },
             { "F1", Synth.F1 },
             { "E1", Synth.E1 },
             { "D#1", Synth.Ds1 },
-            { "Eb1", Synth.Eb1 },
+            { "E&1", Synth.Eb1 },
             { "D1", Synth.D1 },
             { "C#1", Synth.Cs1 },
-            { "Db1", Synth.Db1 },
+            { "D&1", Synth.Db1 },
             { "C1", Synth.C1 },
             { "B0", Synth.B0 },
             { "A#0", Synth.As0 },
-            { "Bb0", Synth.Bb0 },
+            { "B&0", Synth.Bb0 },
             { "A0", Synth.A0 },
         };
         /// <summary>
@@ -371,26 +440,85 @@
         /// </summary>
         public static Score Parse(string scoreScript)
         {
-            Measure[] measures = scoreScript
-                .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(measure => new Measure()
-                {
-                    Sections = new MeasureSection[]
-                    {
-                        new MeasureSection()
-                        {
-                            MIDIInstrument = Synth.AcousticGrandPiano,
-                            Beats = measure.Trim().TrimStart('[').TrimEnd(']').Split(' ').Select(n => new Beat(new int[]{ NoteNameMapping[n] }, 4, 100)).ToArray()
-                        }
-                    }
-                }).ToArray();
-            return new Score()
+            // Loose notes
+            if (!scoreScript.Contains('[') && !scoreScript.Contains(']'))
             {
-                BeatsPerMeasure = 4,
-                BPM = 120,
-                BeatSize = 4,
-                Measures = measures,
-            };
+                int beatsPerMeasure = 4;
+
+                Measure[] measures = scoreScript
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Select((note, index) => (Note: note, Index: index))
+                    .GroupBy(g => g.Index / beatsPerMeasure)
+                    .Select(g => new Measure()
+                    {
+                        Sections = new MeasureSection[]
+                        {
+                            new MeasureSection()
+                            {
+                                MIDIInstrument = Synth.AcousticGrandPiano,
+                                Beats = g.Select(i => CreateBeat(i.Note)).ToArray()
+                            }
+                        }
+                    })
+                    .ToArray();
+
+                return new Score()
+                {
+                    BeatsPerMeasure = beatsPerMeasure,
+                    BPM = 120,
+                    BeatSize = 4,
+                    Measures = measures,
+                };
+            }
+            // Complete composition divided in measures
+            else
+            {
+                Measure[] measures = scoreScript
+                    .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(measure => new Measure()
+                    {
+                        Sections = new MeasureSection[]
+                        {
+                            new MeasureSection()
+                            {
+                                MIDIInstrument = Synth.AcousticGrandPiano,
+                                Beats = measure.Trim().TrimStart('[').TrimEnd(']').Split(' ').Select(n => CreateBeat(n)).ToArray()
+                            }
+                        }
+                    }).ToArray();
+                return new Score()
+                {
+                    BeatsPerMeasure = 4,
+                    BPM = 120,
+                    BeatSize = 4,
+                    Measures = measures,
+                };
+            }
+        }
+        #endregion
+
+        #region Routines
+        /// <summary>
+        /// Create a beat from note notation
+        /// </summary>
+        public static Beat CreateBeat(string note)
+        {
+            Match match = Regex.Match(note, @"^(.*?)(/(\d+))?(@(\d+))?$");
+            if (match.Success)
+            {
+                string notesString = match.Groups[1].Value;
+                string durationString = match.Groups[3].Value;
+                string attackString = match.Groups[5].Value;
+
+                int[] notes = notesString.Split('|').Select(part => NoteNameMapping[part.ToUpper()]).ToArray();
+                return new Beat(
+                    notes,
+                    string.IsNullOrEmpty(durationString) ? 4 : int.Parse(durationString),
+                    string.IsNullOrEmpty(attackString) ? 100 : int.Parse(attackString)
+                );
+            }
+            else
+                throw new ArgumentException($"Canot parse note: {note}");
         }
         #endregion
     }

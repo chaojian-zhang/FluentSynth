@@ -56,6 +56,7 @@ namespace FluentSynth
                     synthesizer.NoteOffAll(true);
                     synthesizer.ProcessMidiMessage(0, 0xC0, section.MIDIInstrument, 0); // Send a program change command (0xC0) to the synthesizer in order to change instrument
 
+                    int previousBeatLengths = 0;
                     for (int b = 0; b < section.Beats.Length; b++)
                     {
                         Beat beat = section.Beats[b];
@@ -67,9 +68,13 @@ namespace FluentSynth
                                 synthesizer.NoteOffAll(false); // With release
                         }
 
-                        Span<float> leftSpan = new Span<float>(left, spanStartIndex + b * beatSizeInFloats, beatSizeInFloats);
-                        Span<float> rightSpan = new Span<float>(right, spanStartIndex + b * beatSizeInFloats, beatSizeInFloats);
+                        int beatSize = beatSizeInFloats * score.BeatSize / beat.Duration;
+
+                        Span<float> leftSpan = new Span<float>(left, spanStartIndex + previousBeatLengths, beatSize);
+                        Span<float> rightSpan = new Span<float>(right, spanStartIndex + previousBeatLengths, beatSize);
                         synthesizer.Render(leftSpan, rightSpan);
+
+                        previousBeatLengths += beatSize;
                     }
                 }
             }
