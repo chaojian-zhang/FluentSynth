@@ -56,25 +56,24 @@ namespace FluentSynth
                     synthesizer.NoteOffAll(true);
                     synthesizer.ProcessMidiMessage(0, 0xC0, section.MIDIInstrument, 0); // Send a program change command (0xC0) to the synthesizer in order to change instrument
 
-                    int previousBeatLengths = 0;
-                    for (int b = 0; b < section.Beats.Length; b++)
+                    int previousNoteLengths = 0;
+                    for (int b = 0; b < section.Notes.Length; b++)
                     {
-                        Beat beat = section.Beats[b];
-                        foreach (int note in beat.Notes)
+                        Note note = section.Notes[b];
+                        foreach (int n in note.Notes)
                         {
-                            if (note > 0)
-                                synthesizer.NoteOn(0, note, beat.Velocity); // Signature: Channel (0 for both), key, velocity
+                            if (n > 0)
+                                synthesizer.NoteOn(0, n, note.Velocity); // Signature: Channel (0 for both), key, velocity
                             else
                                 synthesizer.NoteOffAll(false); // With release
                         }
 
-                        int beatSize = beatSizeInFloats * score.BeatSize / beat.Duration;
-
-                        Span<float> leftSpan = new Span<float>(left, spanStartIndex + previousBeatLengths, beatSize);
-                        Span<float> rightSpan = new Span<float>(right, spanStartIndex + previousBeatLengths, beatSize);
+                        int noteSize = beatSizeInFloats * (int)note.GetBeatCount(score.BeatSize);
+                        Span<float> leftSpan = new(left, spanStartIndex + previousNoteLengths, noteSize);
+                        Span<float> rightSpan = new(right, spanStartIndex + previousNoteLengths, noteSize);
                         synthesizer.Render(leftSpan, rightSpan);
 
-                        previousBeatLengths += beatSize;
+                        previousNoteLengths += noteSize;
                     }
                 }
             }

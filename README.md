@@ -29,7 +29,7 @@ For specifically, either single sequence of notes, or sequence of measures, or e
 
 * Sequence of notes, separated by space: `c d e f g h a b`
 * Sequence of measures: `[c d e f]`
-* Entire composition (in a single line): `4/4 {Piano} [c c g g] [a a g/2]`
+* Entire composition (in a single line): `(120) 4/4 {Piano} [c c g g] [a a g/2]`
 
 ### Musical Notes
 

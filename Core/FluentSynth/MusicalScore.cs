@@ -3,12 +3,22 @@
 namespace FluentSynth
 {
     /// <summary>
-    /// Plays a single beat, potentially as a chord
+    /// Plays a single note, potentially as a chord
     /// </summary>
     /// <param name="Notes">A single MIDI note or a chord of notes</param>
     /// <param name="Duration">Duration: 1, 2, 4, 8, 16, 32</param>
     /// <param name="Velocity">The MIDI velocity range is from 0–127, with 127 being the loudest</param>
-    public record Beat(int[] Notes, int Duration, int Velocity);
+    public record Note(int[] Notes, int Duration, int Velocity)
+    {
+        /// <summary>
+        /// How many beats is this note
+        /// </summary>
+        public double GetBeatCount(int beatSize)
+        {
+            return (double) beatSize / Duration;
+        }
+    }
+
     /// <summary>
     /// Represents a measure for a specific instrument
     /// </summary>
@@ -19,12 +29,24 @@ namespace FluentSynth
         /// </summary>
         public int MIDIInstrument { get; set; } = Synth.AcousticGrandPiano;
         /// <summary>
-        /// Number of beats, limited to size of measure
+        /// Number of notes, limited to size of measure
         /// </summary>
-        public Beat[] Beats { get; set; }
+        public Note[] Notes { get; set; }
+
+        /// <summary>
+        /// Calculates how many units of beats we actually have in this measure.
+        /// Units of beats can be fractions.
+        /// For instance, in a 4/4, a quarter note is 1 unit, an eighth note is 1/2 a unit, while a whole note is 4 units.
+        /// </summary>
+        /// <param name="beatSize">Beat size per time signature.</param>
+        /// <returns>Number of actual beat units</returns>
+        /// <remarks>
+        /// Notice because of the way that music scores are typically assigned and the existence of quarter/eighth etc. notes, the numbers of "notes" in a measure doesn't necessarily match the number of beats.
+        /// </remarks>
+        public double GetBeatCount(int beatSize) => Notes.Sum(n => n.GetBeatCount(beatSize));
     }
     /// <summary>
-    /// Represents an N-beat measure, potentially have overlapping sections of different instruments
+    /// Represents an N-note measure, potentially have overlapping sections of different instruments
     /// </summary>
     public sealed class Measure
     {
@@ -40,7 +62,8 @@ namespace FluentSynth
         /// </summary>
         public int BeatsPerMeasure { get; set; } = 4;
         /// <summary>
-        /// Beat size; denominator in time signature,
+        /// Beat size for a unit bit; denominator in time signature, Actual beat count is beat size divided by note duration (1, 2, 4, 8 etc.).
+        /// E.g. A beat size of 4, with a note duration of 8, gives an actual units of beat of 4/8=1/2 length, or half a beat count.
         /// </summary>
         public int BeatSize { get; set; } = 4;
         /// <summary>
@@ -442,66 +465,114 @@ namespace FluentSynth
         {
             // Loose notes
             if (!scoreScript.Contains('[') && !scoreScript.Contains(']'))
-            {
-                int beatsPerMeasure = 4;
-
-                Measure[] measures = scoreScript
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Select((note, index) => (Note: note, Index: index))
-                    .GroupBy(g => g.Index / beatsPerMeasure)
-                    .Select(g => new Measure()
-                    {
-                        Sections = new MeasureSection[]
-                        {
-                            new MeasureSection()
-                            {
-                                MIDIInstrument = Synth.AcousticGrandPiano,
-                                Beats = g.Select(i => CreateBeat(i.Note)).ToArray()
-                            }
-                        }
-                    })
-                    .ToArray();
-
-                return new Score()
-                {
-                    BeatsPerMeasure = beatsPerMeasure,
-                    BPM = 120,
-                    BeatSize = 4,
-                    Measures = measures,
-                };
-            }
+                return ParseLooseNotes(scoreScript);
             // Complete composition divided in measures
             else
+                return ParseCompleteScore(scoreScript);
+        }
+
+        private static Score ParseCompleteScore(string scoreScript)
+        {
+            scoreScript = ParseTimeSignature(scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo);
+
+            Measure[] measures = scoreScript
+                .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .SelectMany(line => Regex.Matches(line, @"\[.*?\]").Select(m => m.Value))
+                .Select(measure => CreateMeasure(measure, beatsPerMeasure, beatSize)).ToArray();
+            return new Score()
             {
-                Measure[] measures = scoreScript
-                    .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(measure => new Measure()
+                BeatsPerMeasure = beatsPerMeasure,
+                BPM = 120,
+                BeatSize = beatSize,
+                Measures = measures,
+            };
+        }
+
+        private static Score ParseLooseNotes(string scoreScript)
+        {
+            scoreScript = ParseTimeSignature(scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo);
+
+            Measure[] measures = scoreScript
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select((note, index) => (Note: note, Index: index))
+                .GroupBy(g => g.Index / beatsPerMeasure)
+                .Select(g => new Measure()
+                {
+                    Sections = new MeasureSection[]
                     {
-                        Sections = new MeasureSection[]
-                        {
                             new MeasureSection()
                             {
                                 MIDIInstrument = Synth.AcousticGrandPiano,
-                                Beats = measure.Trim().TrimStart('[').TrimEnd(']').Split(' ').Select(n => CreateBeat(n)).ToArray()
+                                Notes = g.Select(i => CreateNote(i.Note)).ToArray()
                             }
-                        }
-                    }).ToArray();
-                return new Score()
-                {
-                    BeatsPerMeasure = 4,
-                    BPM = 120,
-                    BeatSize = 4,
-                    Measures = measures,
-                };
+                    }
+                })
+                .ToArray();
+
+            return new Score()
+            {
+                BeatsPerMeasure = beatsPerMeasure,
+                BPM = tempo,
+                BeatSize = beatSize,
+                Measures = measures,
+            };
+        }
+        private static string ParseTimeSignature(string scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo)
+        {
+            beatsPerMeasure = 4;
+            beatSize = 4;
+            tempo = 120;
+            scoreScript = scoreScript.Trim();
+            Match tempoDefinition = Regex.Match(scoreScript, @"^\((\d+)\)");
+            if (tempoDefinition.Success)
+            {
+                tempo = int.Parse(tempoDefinition.Groups[1].Value);
+
+                scoreScript = scoreScript[tempoDefinition.Length..];
             }
+
+            scoreScript = scoreScript.Trim();
+            Match timeSignatureDefinition = Regex.Match(scoreScript, @"^(\d+)/(\d+)");
+            if (timeSignatureDefinition.Success)
+            {
+                beatsPerMeasure = int.Parse(timeSignatureDefinition.Groups[1].Value);
+                beatSize = int.Parse(timeSignatureDefinition.Groups[2].Value);
+
+                scoreScript = scoreScript[timeSignatureDefinition.Length..];
+            }
+
+            return scoreScript;
         }
         #endregion
 
         #region Routines
         /// <summary>
+        /// Create a measure from measure notation
+        /// </summary>
+        public static Measure CreateMeasure(string script, int beatsPerMeasure, int beatSize)
+        {
+            Measure measure = new()
+            {
+                Sections = new MeasureSection[]
+                {
+                    new MeasureSection()
+                    {
+                        MIDIInstrument = Synth.AcousticGrandPiano,
+                        Notes = script.Trim().TrimStart('[').TrimEnd(']').Split(' ').Select(n => CreateNote(n)).ToArray()
+                    }
+                }
+            };
+
+            MeasureSection invalidSection = measure.Sections.FirstOrDefault(s => s.GetBeatCount(beatSize) > beatsPerMeasure);
+            if (invalidSection != null)
+                throw new ArgumentException($"Invalid number of beats: {script}; Should be {beatsPerMeasure} beats per measure - got {invalidSection.GetBeatCount(beatSize)} beats.");
+
+            return measure;
+        }
+        /// <summary>
         /// Create a beat from note notation
         /// </summary>
-        public static Beat CreateBeat(string note)
+        public static Note CreateNote(string note)
         {
             Match match = Regex.Match(note, @"^(.*?)(/(\d+))?(@(\d+))?$");
             if (match.Success)
@@ -511,7 +582,7 @@ namespace FluentSynth
                 string attackString = match.Groups[5].Value;
 
                 int[] notes = notesString.Split('|').Select(part => NoteNameMapping[part.ToUpper()]).ToArray();
-                return new Beat(
+                return new Note(
                     notes,
                     string.IsNullOrEmpty(durationString) ? 4 : int.Parse(durationString),
                     string.IsNullOrEmpty(attackString) ? 100 : int.Parse(attackString)
