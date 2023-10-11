@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33712.159
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluentSynth", "Core\FluentSynth\FluentSynth.csproj", "{29723B1E-4C97-410F-8ACB-828BFD0E0AFE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{65688665-CD70-468B-8928-B30E0E82126B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Composition", "Composition", "{76726793-F256-48D3-9B56-4BC3CA27A08E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProceduralMusic", "Music\ProceduralMusic\ProceduralMusic.csproj", "{EC179A3E-2F0D-41F9-8481-52CDE0253F65}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluentMusic", "Music\FluentMusic\FluentMusic.csproj", "{C7712FB7-F7A7-44C4-AA75-6C645D978CF0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{DC6FF363-C553-4D6E-BD0D-E6C7E5ECE799}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{29723B1E-4C97-410F-8ACB-828BFD0E0AFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29723B1E-4C97-410F-8ACB-828BFD0E0AFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29723B1E-4C97-410F-8ACB-828BFD0E0AFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29723B1E-4C97-410F-8ACB-828BFD0E0AFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC179A3E-2F0D-41F9-8481-52CDE0253F65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC179A3E-2F0D-41F9-8481-52CDE0253F65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC179A3E-2F0D-41F9-8481-52CDE0253F65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC179A3E-2F0D-41F9-8481-52CDE0253F65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7712FB7-F7A7-44C4-AA75-6C645D978CF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7712FB7-F7A7-44C4-AA75-6C645D978CF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7712FB7-F7A7-44C4-AA75-6C645D978CF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7712FB7-F7A7-44C4-AA75-6C645D978CF0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{29723B1E-4C97-410F-8ACB-828BFD0E0AFE} = {65688665-CD70-468B-8928-B30E0E82126B}
+		{EC179A3E-2F0D-41F9-8481-52CDE0253F65} = {DC6FF363-C553-4D6E-BD0D-E6C7E5ECE799}
+		{C7712FB7-F7A7-44C4-AA75-6C645D978CF0} = {76726793-F256-48D3-9B56-4BC3CA27A08E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2C58A13F-DC40-45D1-913D-B4B5DE07D8FC}
+	EndGlobalSection
+EndGlobal
