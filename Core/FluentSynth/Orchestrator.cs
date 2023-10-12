@@ -97,6 +97,8 @@ namespace FluentSynth
                         }
 
                         // TODO: Change to block-based rendering per example here - https://github.com/sinshu/meltysynth
+                        // Define the melody: block ID indicates timing
+
                         // We are almost there with our current multiple-section (channel) per measure structure
                         int noteSize = score.GetBeatSizeInFloats(SampleRate) * (int)note.GetBeatCount(score.BeatSize);
                         Span<float> leftSpan = new(left, spanStartIndex + previousNoteLengths, noteSize);
@@ -139,7 +141,7 @@ namespace FluentSynth
                                 Span<float> leftSpan = new(left, spanStartIndex + previousNoteLengths, clipLength);
                                 Span<float> rightSpan = new(right, spanStartIndex + previousNoteLengths, clipLength);
 
-                                MixIn(leftSpan, rightSpan, sampleRate, reader);
+                                MixInAudio(leftSpan, rightSpan, sampleRate, reader);
                             }
                         }
 
@@ -149,7 +151,10 @@ namespace FluentSynth
                 }
             }
         }
-        private static void MixIn(Span<float> left, Span<float> right, int sampleRate, AudioFileReader mixin)
+        #endregion
+
+        #region Subroutines
+        private static void MixInAudio(Span<float> left, Span<float> right, int sampleRate, AudioFileReader mixin)
         {
             (float[] Left, float[] Right) result = MixAudio(left.ToArray(), right.ToArray(), sampleRate, mixin);
 
@@ -163,7 +168,7 @@ namespace FluentSynth
 
             MemoryStream memoryStream = new(bytes);
             RawSourceWaveStream waveStream = new(memoryStream, waveFormat);
-            
+
             int sampleCount = new int[] { left.Length, right.Length, (int)reader.Length }.Min();
             float[] buffer = new float[sampleCount];
 
@@ -172,9 +177,40 @@ namespace FluentSynth
 
             return Synth.SplitChannels(buffer);
         }
+        private static void MixInMelody()
+        {
+
+        }
         #endregion
 
         #region Helpers
+        private static (float[] Left, float[] Right) MelodySynth(Synthesizer synthesizer, int sampleRate, (int Channel, int StartBlock, int EndBlock, int Pitch, int Attack)[] uniquePitches)
+        {
+            int blockSize = sampleRate / 10; // The length of a block is 0.1 sec.
+            int blockCount = 30; // The entire output is blockCount * blockSize (in this case 3 sec)
+
+            // The output buffer
+            int totalSamples = blockSize * blockCount;
+            float[] left = new float[totalSamples];
+            float[] right = new float[totalSamples];
+
+            for (int t = 0; t < blockCount; t++)
+            {
+                foreach ((int Channel, int StartBlock, int EndBlock, int Pitch, int Attack) in uniquePitches)
+                {
+                    if (t == StartBlock) synthesizer.NoteOn(Channel, Pitch, Attack);
+                    if (t == EndBlock) synthesizer.NoteOff(Channel, Pitch);
+                }
+
+                // Render the block.
+                var blockLeft = left.AsSpan(blockSize * t, blockSize);
+                var blockRight = right.AsSpan(blockSize * t, blockSize);
+                synthesizer.Render(blockLeft, blockRight);
+                // remark-cz: I didn't fully get how it can sustain "state" of a note - looks like inside the implement there is a Voice class which might actually maintain the states of things while NoteOn and NoteOff are actually sent as commands
+            }
+
+            return (left, right);
+        }
         private static IWaveProvider ConvertWaveFormat(WaveFormat targetWaveFormat, AudioFileReader audioReader)
         {
             if (audioReader.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat)
@@ -185,43 +221,6 @@ namespace FluentSynth
             else if (audioReader.WaveFormat.Encoding == WaveFormatEncoding.Pcm)
                 return new WaveFormatConversionStream(targetWaveFormat, audioReader);
             throw new ApplicationException("Unexpected format.");
-        }
-        #endregion
-
-        #region Helpers
-        static (float[] Left, float[] Right) MelodySynth(Synthesizer synthesizer, int sampleRate)
-        {
-            var blockSize = sampleRate / 10; // The length of a block is 0.1 sec.
-            var blockCount = 30; // The entire output is blockCount * blockSize (in this case 3 sec)
-
-            // Define the melody: A single row indicates the start timing (in terms of blockID), end timing, and pitch.
-            (int StartBlock, int EndBlock, int Pitch)[] data = new[]
-            {
-                (5, 10, 60),
-                (10, 15, 64),
-                (15, 25, 67)
-            };
-
-            // The output buffer
-            int totalSamples = blockSize * blockCount;
-            float[] left = new float[totalSamples];
-            float[] right = new float[totalSamples];
-
-            for (int t = 0; t < blockCount; t++)
-            {
-                foreach ((int StartBlock, int EndBlock, int Pitch) in data)
-                {
-                    if (t == StartBlock) synthesizer.NoteOn(0, Pitch, 100);
-                    if (t == EndBlock) synthesizer.NoteOff(0, Pitch);
-                }
-
-                // Render the block.
-                var blockLeft = left.AsSpan(blockSize * t, blockSize);
-                var blockRight = right.AsSpan(blockSize * t, blockSize);
-                synthesizer.Render(blockLeft, blockRight); // I don't get how it can sustain "state" of a note; Looks like inside the implement there is a Voice class which might actually maintain the states of things while NoteOn and NoteOff are actually sent as commands
-            }
-
-            return (left, right);
         }
         #endregion
     }
