@@ -67,5 +67,27 @@ namespace FluentSynthUnitTests
             Assert.Equal(3, score.Measures[0].Sections.Length);
             Assert.Equal(1, score.Measures[4].Sections.Length);
         }
+
+        [Fact]
+        public void MultiInstrumentScoreShouldRecognizeVocals()
+        {
+            Score score = MusicalScoreParser.ParseCompleteScoreMultipleInstruments("""
+                Mode: Multi-Instrument
+                # Tempo 120
+                # Time Signature 4/4
+                (120) 4/4
+
+                V1: Vocal1.wav
+                V2: Vocal2.wav
+
+                Piano [C C G G]
+                Vocal [_ V1 _ V2]
+                """);
+            Assert.Equal(2, score.Measures[0].Sections.Length);
+            Assert.Equal("Vocal", score.Measures[0].Sections.Last().GroupName);
+            Assert.NotNull(score.Vocals);
+            Assert.Single(score.Measures[0].Sections.Last().Notes.Last().Pitches);
+            Assert.Equal("Vocal2.wav", score.Vocals[score.Measures[0].Sections.Last().Notes.Last().Pitches.First().VocalName]);
+        }
     }
 }

@@ -88,12 +88,42 @@ E.g. `Piano 1:Piano [C C G G] [A A G/2] [F F E E] [D D C/2]`
 
 When unique instruments are used for a group, `<Group Name>:` part can be omitted and a default grou name using instrument name will be created.
 
+### Vocal
+
+Vocals can be defined using `<VocalName>: <File Path>` syntax on its own lines. The vocal name cannot have space and special characters, and it's name cannot clash with known notes. Then it's used just like a regular note. Vocal name is case-sensitive.
+
+Example:
+
+```FluentSynth
+V1: Vocal1.wav
+
+Piano [C D E F]
+Vocal [_ _ V1 _]
+```
+
+Vocals will ignore durations because durations of vocals are determined by the audio clip length.
+Attack of vocals determine volume.
+
 ## TODO
 
 The overall infrastructure is established, in the future, the likely site of improvement is either [Orchestrator](./Core/FluentSynth/Orchestrator.cs) or [MusicalScoreParser](./Core/FluentSynth/MusicalScoreParser.cs).
 
+Low Level Pending:
+
+- PENDING
+
+MIDI Engine:
+
 - [ ] Convert of FSMN to .MIDI file.
 - [ ] Convert of FSMN/MIDI file into mp3/wav file.
+
+FSMN Score:
+
+- [ ] Relative and absolute path handling in vocal file specification (at the moment it's relative to current working directory)
+
+Audio Editing (Exposed only through Pure Scripting):
+
+- [ ] Quick cut and format conversion
 
 ## References
 
@@ -102,6 +132,7 @@ Main references:
 * NAudio: https://github.com/naudio
 * Melty Synth: https://github.com/sinshu/meltysynth
 * NAudio synth: https://github.com/naudio/NAudio/blob/master/Docs/PlaySineWave.md
+* NAudio key constrct: https://github.com/naudio/NAudio/blob/master/Docs/WaveProviders.md
 * NAudio raw sample stream: https://github.com/naudio/NAudio/blob/master/Docs/RawSourceWaveStream.md
 * MIDI playback: https://github.com/sinshu/meltysynth/tree/main/Examples/NAudio
 * MIDI Note Numbres and Center Frequencies: https://www.inspiredacoustics.com/en/MIDI_note_numbers_and_center_frequencies
