@@ -1,3 +1,5 @@
+![FSMN Score (Screenshot)](./docs/imgs/score.png)
+
 # Fluent Synth
 
 This project provides a C# Fluent API music composition library for use in a scripting environment e.g. [Pure](https://github.com/pure-the-Language/Pure/). Many years ago when Haskell was still new they had [Euterpea](https://www.euterpea.com/) which is a fun concept but tedious to use because Haskell is hard to use, and music composition is inherently a procedural thing so a functional approach is not the best way to model it.
