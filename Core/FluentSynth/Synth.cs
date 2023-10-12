@@ -28,6 +28,10 @@ namespace FluentSynth
 
         #region Commonly Used Constants - Sample Frequencies
         /// <summary>
+        /// Bit rate of PCM waveform
+        /// </summary>
+        public const int BitsPerSample = sizeof(short) * 8; // 16
+        /// <summary>
         /// Provides common reference sample rate: 44100
         /// </summary>
         public const int SampleRate44K = 44100;
@@ -38,6 +42,12 @@ namespace FluentSynth
         #endregion
 
         #region Commonly Used Constants - MIDI Note Names
+        /// <summary>
+        /// Represents a stop.
+        /// This is not a MIDI note number but used internally by Orchestrator to represent stops.
+        /// </summary>
+        public const int StopNote = -1;
+
         /// <summary>
         /// MIDI C8 (108)
         /// Piano key number: 88
@@ -798,6 +808,12 @@ namespace FluentSynth
 
         #region Commonly Used Constants - MIDI Instruments
         /// <summary>
+        /// Represents a non-instrumental track.
+        /// This is not a MIDI instrument and is ignored by MIDI engine.
+        /// </summary>
+        public const int Vocal = -1;
+
+        /// <summary>
         /// MIDI Instrument: Acoustic Grand Piano (0)
         /// Class: Piano
         /// </summary>
@@ -1465,7 +1481,7 @@ namespace FluentSynth
         {
             byte[] bytes = ConvertChannels(left, right);
             MemoryStream memoryStream = new(bytes);
-            RawSourceWaveStream waveStream = new(memoryStream, new WaveFormat(sampleRate, 16, 2));
+            RawSourceWaveStream waveStream = new(memoryStream, new WaveFormat(sampleRate, BitsPerSample, 2));
             WaveOutEvent outputDevice = new();
 
             outputDevice.Init(waveStream);
@@ -1483,7 +1499,7 @@ namespace FluentSynth
         {
             var bytes = ConvertChannel(channel);
             var memoryStream = new MemoryStream(bytes);
-            var waveStream = new RawSourceWaveStream(memoryStream, new WaveFormat(sampleRate, 16, 1));
+            var waveStream = new RawSourceWaveStream(memoryStream, new WaveFormat(sampleRate, BitsPerSample, 1));
             var outputDevice = new WaveOutEvent();
 
             outputDevice.Init(waveStream);
@@ -1542,9 +1558,50 @@ namespace FluentSynth
 
         #region Helpers
         /// <remarks>
+        /// Splits an 16-bit PCM duel channel audio byte stream into two channels of float wave data
+        /// </remarks>
+        public static (float[] Left, float[] Right) SplitChannels(byte[] pcm)
+        {
+            int stride = 2 * sizeof(short);
+            int sampleCount = pcm.Length / stride;
+            float[] left = new float[sampleCount];
+            float[] right = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                left[i] = BitConverter.ToInt16(new byte[] { pcm[i * stride], pcm[i * stride + 1] }) / (float)short.MaxValue;
+                right[i] = BitConverter.ToInt16(new byte[] { pcm[i * stride + 2], pcm[i * stride + 3] }) / (float)short.MaxValue;
+            }
+
+            return (left, right);
+        }
+
+        /// <remarks>
+        /// Splits a single precision (PCM-like) IEEE float duel channel audio stream into two channels of float wave data
+        /// </remarks>
+        /// <param name="samples">Values assumed to be within [-1, 1]</param>
+        public static (float[] Left, float[] Right) SplitChannels(float[] samples)
+        {
+            int stride = 2;
+            int sampleCount = samples.Length / stride;
+            float[] left = new float[sampleCount];
+            float[] right = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                left[i] = samples[i * stride];
+                right[i] = samples[i * stride + 1];
+            }
+
+            return (left, right);
+        }
+
+        /// <param name="left">Values must be within [-1, 1]</param>
+        /// <param name="right">Values must be within [-1, 1]</param>
+        /// <remarks>
         /// PCM audio supports up to 8 channels of audio, which includes left, right, center, left surround, right surround, left back, right back, and a subwoofer channel.
         /// </remarks>
-        private static byte[] ConvertChannels(float[] left, float[] right)
+        public static byte[] ConvertChannels(float[] left, float[] right)
         {
             var bytes = left
                 .Zip(right, (left, right) => (Left: left, Right: right))
@@ -1558,14 +1615,14 @@ namespace FluentSynth
                     // Each sample is just byte sequence of a short
                     // Samples for each channel follows each other
                     return new byte[] {
-                bytesL[0], bytesL[1],
-                bytesR[0], bytesR[1]
+                        bytesL[0], bytesL[1],
+                        bytesR[0], bytesR[1]
                     };
                 })
                 .ToArray();
             return bytes;
         }
-        private static byte[] ConvertChannel(float[] channel)
+        public static byte[] ConvertChannel(float[] channel)
         {
             var bytes = channel
                 .SelectMany(sample => {

@@ -4,12 +4,23 @@ using System.Text.RegularExpressions;
 namespace FluentSynth
 {
     /// <summary>
+    /// Represent a pitch/sound of a note; Can be either a musical pitch or a vocal.
+    /// </summary>
+    public record NotePitch(int Pitch, string VocalName)
+    {
+        /// <summary>
+        /// Whether this pitch represents a vocal;
+        /// When true its pitch value is not used (and assigned as Synth.StopNote).
+        /// </summary>
+        public bool IsVocal => VocalName != null;
+    }
+    /// <summary>
     /// Plays a single note, potentially as a chord
     /// </summary>
-    /// <param name="Notes">A single MIDI note or a chord of notes</param>
+    /// <param name="Pitches">A single MIDI note or a chord of notes, or a vocal</param>
     /// <param name="Duration">Duration: 1, 2, 4, 8, 16, 32</param>
     /// <param name="Velocity">The MIDI velocity range is from 0–127, with 127 being the loudest</param>
-    public record Note(int[] Notes, int Duration, int Velocity)
+    public record Note(NotePitch[] Pitches, int Duration, int Velocity)
     {
         /// <summary>
         /// How many beats is this note
@@ -80,6 +91,12 @@ namespace FluentSynth
         /// How many beats per minute, decides tempo.
         /// </summary>
         public int BPM { get; set; } = 4;
+
+        /// <summary>
+        /// A list of vocals referencing WAV files and function like notes
+        /// </summary>
+        public Dictionary<string, string> Vocals { get; set; }
+
         /// <summary>
         /// Actual data stored as Measures.
         /// </summary>
@@ -100,7 +117,7 @@ namespace FluentSynth
         public static Dictionary<string, int> NoteNameMapping { get; } = new()
         {
             // Special Beats
-            { "_", -1 },
+            { "_", Synth.StopNote },
 
             // Simplified Names
             { "A'", Synth.A5 },
@@ -317,6 +334,9 @@ namespace FluentSynth
         /// </summary>
         public static Dictionary<string, int> InstrumentNameMapping { get; } = new()
         {
+            // Special track
+            { "Vocal", Synth.Vocal },
+
             // Standard Class
             { "Piano", Synth.AcousticGrandPiano },
             { "Chromatic Percussion", Synth.Celesta },
@@ -493,10 +513,19 @@ namespace FluentSynth
                 .Skip(1)
                 .ToArray();
 
+            // Parse time signature
             ParseTimeSignature(contentLines.First(), out int beatsPerMeasure, out int beatSize, out int tempo);
 
+            // Parse vocals
+            IEnumerable<string> vocalLines = contentLines.Where(line => ScoreVocalDefinitionLineRgex().IsMatch(line));
+            Dictionary<string, string> vocals = vocalLines
+                .Select(line => ScoreVocalDefinitionLineRgex().Match(line))
+                .Select(match => (Key: match.Groups[1].Value, File: match.Groups[2].Value))
+                .ToDictionary(p => p.Key, p => p.File);
+
+            // Parse measure content lines
             (string Line, int Index, (string Grouped, string Instrument) GroupedInstrument, bool IsValid, Measure[] Measures)[] lineMeasures = contentLines
-                .Skip(1)
+                .Skip(1)    // Skip time sianguare
                 .Select((line, index) => {
                     Match groupedInstrument = ScoreMultiInstrumentLineGroupedInstrumentRegex().Match(line);
                     string instrumentName = groupedInstrument.Groups[3].Value.Trim();
@@ -513,7 +542,7 @@ namespace FluentSynth
                         Measures: ScoreMeasureRegex()
                             .Matches(line)
                             .Select(m => m.Value)
-                            .Select(measure => CreateMeasure(measure, beatsPerMeasure, beatSize))
+                            .Select(measure => CreateMeasure(measure, beatsPerMeasure, beatSize, vocals))
                             .ToArray()
                     );
                 })
@@ -561,6 +590,7 @@ namespace FluentSynth
                 BPM = tempo,
                 BeatSize = beatSize,
                 Measures = assemble.ToArray(),
+                Vocals = vocals
             };
         }
         private static Score ParseCompleteScoreSingleInstrument(string scoreScript)
@@ -647,7 +677,7 @@ namespace FluentSynth
         /// <summary>
         /// Create a measure from measure notation
         /// </summary>
-        public static Measure CreateMeasure(string script, int beatsPerMeasure, int beatSize)
+        public static Measure CreateMeasure(string script, int beatsPerMeasure, int beatSize, Dictionary<string, string> vocals = null)
         {
             Match match = ScoreMeasureRegex().Match(script);
             string instrument = match.Groups[2].Value;
@@ -660,7 +690,7 @@ namespace FluentSynth
                     new MeasureSection()
                     {
                         MIDIInstrument = string.IsNullOrEmpty(instrument) ? Synth.AcousticGrandPiano : InstrumentNameMapping[instrument],
-                        Notes = section.Split(' ').Select(n => CreateNote(n)).ToArray()
+                        Notes = section.Split(' ').Select(n => CreateNote(n, vocals)).ToArray()
                     }
                 }
             };
@@ -674,18 +704,24 @@ namespace FluentSynth
         /// <summary>
         /// Create a beat from note notation
         /// </summary>
-        public static Note CreateNote(string note)
+        public static Note CreateNote(string note, Dictionary<string, string> vocals = null)
         {
-            Match match = Regex.Match(note, @"^(.*?)(/(\d+))?(@(\d+))?$");
+            Match match = ScoreMeasureMusicalNoteWithDurationAndAttackRegex().Match(note);
             if (match.Success)
             {
                 string notesString = match.Groups[1].Value;
                 string durationString = match.Groups[3].Value;
                 string attackString = match.Groups[5].Value;
 
-                int[] notes = notesString.Split('|').Select(part => NoteNameMapping[part.ToUpper()]).ToArray();
+                NotePitch[] pitches = notesString
+                    .Split('|')
+                    .Select(pitchName => (vocals != null && vocals.ContainsKey(pitchName)) 
+                        ? new NotePitch(Synth.StopNote, pitchName)
+                        : new NotePitch(NoteNameMapping[pitchName.ToUpper()], null)
+                    )
+                    .ToArray();
                 return new Note(
-                    notes,
+                    pitches,
                     string.IsNullOrEmpty(durationString) ? 4 : int.Parse(durationString),
                     string.IsNullOrEmpty(attackString) ? 100 : int.Parse(attackString)
                 );
@@ -700,6 +736,10 @@ namespace FluentSynth
         private static partial Regex ScoreMeasureRegex();
         [GeneratedRegex(@"^(([^:]*?):)?([^\[]*)\s*")]
         private static partial Regex ScoreMultiInstrumentLineGroupedInstrumentRegex();
+        [GeneratedRegex(@"^([a-zA-Z0-9_$]*): (.*)$")]
+        private static partial Regex ScoreVocalDefinitionLineRgex();
+        [GeneratedRegex("^(.*?)(/(\\d+))?(@(\\d+))?$")]
+        private static partial Regex ScoreMeasureMusicalNoteWithDurationAndAttackRegex();
         #endregion
     }
 }

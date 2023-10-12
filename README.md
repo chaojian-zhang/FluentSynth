@@ -88,6 +88,19 @@ E.g. `Piano 1:Piano [C C G G] [A A G/2] [F F E E] [D D C/2]`
 
 When unique instruments are used for a group, `<Group Name>:` part can be omitted and a default grou name using instrument name will be created.
 
+### Vocal
+
+Vocals can be defined using `<VocalName>: <File Path>` syntax on its own lines. The vocal name cannot have space and special characters, and it's name cannot clash with known notes. Then it's used just like a regular note. Vocal name is case-sensitive.
+
+Example:
+
+```FluentSynth
+V1: Vocal1.wav
+
+Piano [C D E F]
+Vocal [_ _ V1 _]
+```
+
 ## TODO
 
 The overall infrastructure is established, in the future, the likely site of improvement is either [Orchestrator](./Core/FluentSynth/Orchestrator.cs) or [MusicalScoreParser](./Core/FluentSynth/MusicalScoreParser.cs).
