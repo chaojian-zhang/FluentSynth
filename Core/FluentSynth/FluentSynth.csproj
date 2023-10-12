@@ -7,7 +7,13 @@
     <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
     <PublishReadyToRun>true</PublishReadyToRun>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ApplicationIcon>Icon.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Icon.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MeltySynth" Version="2.4.1" />

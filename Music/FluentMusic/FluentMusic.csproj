@@ -7,7 +7,12 @@
     <Nullable>disable</Nullable>
     <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
     <PublishReadyToRun>true</PublishReadyToRun>
+    <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Icon.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\FluentSynth\FluentSynth.csproj" />
