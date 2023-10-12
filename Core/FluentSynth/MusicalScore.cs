@@ -29,6 +29,12 @@ namespace FluentSynth
     public sealed class MeasureSection
     {
         /// <summary>
+        /// Name of the section in terms of instrument group;
+        /// Equivalent to MIDI channel;
+        /// Equivalent to DAW track.
+        /// </summary>
+        public string GroupName { get; set; }
+        /// <summary>
         /// ID of MIDI instrument
         /// </summary>
         public int MIDIInstrument { get; set; } = Synth.AcousticGrandPiano;
@@ -493,13 +499,16 @@ namespace FluentSynth
                 .Skip(1)
                 .Select((line, index) => {
                     Match groupedInstrument = ScoreMultiInstrumentLineGroupedInstrumentRegex().Match(line);
+                    string instrumentName = groupedInstrument.Groups[3].Value.Trim();
+                    string groupName = groupedInstrument.Groups[2].Value.Trim();
+                    if (string.IsNullOrEmpty(groupName)) groupName = instrumentName;
 
                     return (
                         Line: line,
                         Index: index,
                         GroupedInstrument: groupedInstrument.Success 
-                            ? (Grouped: groupedInstrument.Groups[1].Value.Trim(), Instrument: groupedInstrument.Groups[2].Value.Trim()) 
-                            : (null, null), // Named grouped:instrument
+                            ? (GroupName: groupName, InstrumentName: instrumentName) 
+                            : (null, null), // Named instrument group, syntax `Group Nam:Instrument Name`
                         IsValid: groupedInstrument.Success,
                         Measures: ScoreMeasureRegex()
                             .Matches(line)
@@ -515,14 +524,21 @@ namespace FluentSynth
                 throw new ArgumentException($"Invalid line - missing grouped:instrument: {lineMeasures.First(l => l.IsValid)}");
 
             // Assign section instruments
-            Dictionary<(string Grouped, string Instrument), Measure[]> instrumentGroups = lineMeasures
+            Dictionary<(string GroupName, string InstrumentName), Measure[]> instrumentGroups = lineMeasures
                 .GroupBy(m => m.GroupedInstrument)
-                .Select(g => (Key: g.Key, Measures: g.SelectMany(g => g.Measures).ToArray()))
-                .ToDictionary(g => g.Key, g => g.Measures);
+                .Select(g => (InstrumentGroup: g.Key, Measures: g.SelectMany(g => g.Measures).ToArray()))
+                .ToDictionary(g => g.InstrumentGroup, g => g.Measures);
             foreach (var group in instrumentGroups)
+            {
                 foreach (var measure in group.Value)
+                {
                     foreach (var section in measure.Sections)
-                        section.MIDIInstrument = InstrumentNameMapping[group.Key.Instrument];
+                    {
+                        section.MIDIInstrument = InstrumentNameMapping[group.Key.InstrumentName];
+                        section.GroupName = group.Key.GroupName;
+                    }
+                }
+            }
 
             // Assemble/zip measures
             int maxUniqueSections = instrumentGroups.Max(g => g.Value.Count());
@@ -682,7 +698,7 @@ namespace FluentSynth
         #region Regular Expressions
         [GeneratedRegex(@"({([a-zA-Z ]+)})?\s*\[(.*?)\]")]
         private static partial Regex ScoreMeasureRegex();
-        [GeneratedRegex(@"^([^:]*?):([^\[]*)\s*")]
+        [GeneratedRegex(@"^(([^:]*?):)?([^\[]*)\s*")]
         private static partial Regex ScoreMultiInstrumentLineGroupedInstrumentRegex();
         #endregion
     }

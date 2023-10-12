@@ -86,6 +86,8 @@ One can use `#` to denote comment lines.
 Each "group" line is like this: `<Group Name>:<Group Instrument> <Measures>`. The `<Group Name>:<Group Instrument>` part uniquely identify a group. It's possible to have the same `<Group Name>` with different instruments, which are identified as different groups. Different groups do not need to have same number of measures - they will play together for so long as the measures can support.
 E.g. `Piano 1:Piano [C C G G] [A A G/2] [F F E E] [D D C/2]`
 
+When unique instruments are used for a group, `<Group Name>:` part can be omitted and a default grou name using instrument name will be created.
+
 ## TODO
 
 The overall infrastructure is established, in the future, the likely site of improvement is either [Orchestrator](./Core/FluentSynth/Orchestrator.cs) or [MusicalScoreParser](./Core/FluentSynth/MusicalScoreParser.cs).
@@ -106,7 +108,7 @@ Main references:
 * MIDI Instrument number: https://fmslogo.sourceforge.io/manual/midi-instrument.html
 * Guido Music Notation: https://wiki.ccarh.org/wiki/Guido_Music_Notation
 
-MIDI Notes: (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs))
+MIDI Notes (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs)):
 
 |Note Name|MIDI Number|Piano Key Number|Variable Name|Frequency (Equal tuning at 440 Hz)|
 |-|-|-|-|-|
@@ -199,7 +201,7 @@ MIDI Notes: (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs))
 |A#0/Bb0|**22**|2|`As0` or `Bb0`|*29.14*|
 |A0|**21**|1|`A0`|*27.50*|
 
-MIDI Instruments: (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs))
+MIDI Instruments (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs)):
 
 |Instrument|Class|MIDI Number|Variable Name|
 |-|-|-|-|

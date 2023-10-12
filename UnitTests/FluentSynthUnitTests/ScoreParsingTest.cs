@@ -27,6 +27,29 @@ namespace FluentSynthUnitTests
         }
 
         [Fact]
+        public void MultiInstrumentScoreShouldAllowDefaultGroupNames()
+        {
+            Score score = MusicalScoreParser.ParseCompleteScoreMultipleInstruments("""
+                Mode: Multi-Instrument
+                # Tempo 120
+                # Time Signature 4/4
+                (120) 4/4
+
+                Piano [C C G G] [A A G/2] [F F E E] [D D C/2]
+                Piano [G G F F] [E E D/2] [G G F F] [E E D/2]
+                Piano [C C G G] [A A G/2] [F F E E] [D D C/2]
+
+                Guitar [C C G G] [A A G/2] [F F E E] [D D C/2]
+                Guitar [G G F F] [E E D/2] [G G F F] [E E D/2]
+                """);
+            Assert.Equal(2, score.Measures[0].Sections.Length);
+            Assert.Equal(1, score.Measures[8].Sections.Length);
+
+            Assert.Equal("Piano", score.Measures.First().Sections.First().GroupName);
+            Assert.Equal("Guitar", score.Measures.First().Sections.Last().GroupName);
+        }
+
+        [Fact]
         public void MultiInstrumentScoreShouldAllowInstrumentGroupsWithSameName()
         {
             Score score = MusicalScoreParser.ParseCompleteScoreMultipleInstruments("""
