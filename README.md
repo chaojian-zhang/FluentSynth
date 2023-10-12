@@ -34,9 +34,15 @@ This application may depend on **.Net 7 runtime**, and it's available from [Micr
 
 This program depends on cross-platform packages and for Mac and Linux build, one can compile from source using Visual Studio - use [FluentSynth.sln](./FluentSynth.sln) or [PowerShell 7 script](./PowerShell/PublishAll.ps1) to build (require **.Net 7 SDK**).
 
-Usage: see [release notes](https://github.com/chaojian-zhang/FluentSynth/releases/tag/v0.1.0).
+Usage: 
 
-[Video: Basic Usage (No Audio)](./docs/vids/basic.mp4)
+* See [release notes](https://github.com/chaojian-zhang/FluentSynth/releases/tag/v0.1.0).
+* Basic Usage (no audio): see [video](./docs/vids/basic.mp4).
+
+Demos:
+
+* https://youtu.be/qHAPr2-QYiw
+* (A complete tutorial on FSMN syntax and basic REPL and CLI usage will be uploaded in the future)
 
 ## Methodology (Preliminary Note)
 
