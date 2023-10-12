@@ -47,6 +47,11 @@ namespace FluentSynth
         /// This is not a MIDI note number but used internally by Orchestrator to represent stops.
         /// </summary>
         public const int StopNote = -1;
+        /// <summary>
+        /// Represents a vocal note.
+        /// This is not a MIDI note number but used internally by Orchestrator to represent vocals or audio samples.
+        /// </summary>
+        public const int VocalNote = -2;
 
         /// <summary>
         /// MIDI C8 (108)

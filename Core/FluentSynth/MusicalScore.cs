@@ -734,7 +734,7 @@ namespace FluentSynth
                 NotePitch[] pitches = notesString
                     .Split('|')
                     .Select(pitchName => (vocals != null && vocals.ContainsKey(pitchName)) 
-                        ? new NotePitch(Synth.StopNote, pitchName)
+                        ? new NotePitch(Synth.VocalNote, pitchName)
                         : new NotePitch(NoteNameMapping[pitchName.ToUpper()], null)
                     )
                     .ToArray();
