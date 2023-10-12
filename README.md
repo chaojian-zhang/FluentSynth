@@ -23,6 +23,21 @@ Example:
 [C C G G] [A A G/2] [F F E E] [D D C/2]
 ```
 
+## Installation
+
+This application may depend on **.Net 7 runtime**, and it's available from [Microsoft](https://dotnet.microsoft.com/en-us/download/dotnet/7.0).
+
+1. Download the latest from [release page](https://github.com/chaojian-zhang/FluentSynth/releases/latest);
+2. Follow [download instructions](https://github.com/chaojian-zhang/FluentSynth/releases/tag/v0.1.0) to prepare a suitable SoundFont file for use;
+3. Run `FluentMusic.exe` for CLI and REPL (read-eval-print loop) use;
+4. Use [Pure](https://github.com/pure-the-Language/Pure/) or other scripting platform to import `FluentSynth.dll` for scripting use.
+
+This program depends on cross-platform packages and for Mac and Linux build, one can compile from source using Visual Studio - use [FluentSynth.sln](./FluentSynth.sln) or [PowerShell 7 script](./PowerShell/PublishAll.ps1) to build (require **.Net 7 SDK**).
+
+Usage: see [release notes](https://github.com/chaojian-zhang/FluentSynth/releases/tag/v0.1.0).
+
+[Video: Basic Usage (No Audio)](./docs/vids/basic.mp4)
+
 ## Methodology (Preliminary Note)
 
 This library provides raw API for manipulating and assembling sin waves and notes, and relies on NAudio for music playback. By reading or creating MIDI files on the fly, one can represent musical ideas on a higher level.
