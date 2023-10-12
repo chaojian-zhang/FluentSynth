@@ -1,5 +1,4 @@
-﻿using System.Reflection.PortableExecutable;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace FluentSynth
 {
@@ -78,6 +77,7 @@ namespace FluentSynth
     /// </summary>
     public sealed class Score
     {
+        #region Properties
         /// <summary>
         /// How many beats in a measure; Numerator in time signature,
         /// </summary>
@@ -91,17 +91,26 @@ namespace FluentSynth
         /// How many beats per minute, decides tempo.
         /// </summary>
         public int BPM { get; set; } = 4;
+        #endregion
 
+        #region Data
         /// <summary>
         /// A list of vocals referencing WAV files and function like notes
         /// </summary>
         public Dictionary<string, string> Vocals { get; set; }
-
         /// <summary>
         /// Actual data stored as Measures.
         /// </summary>
-
         public Measure[] Measures;
+        #endregion
+
+        #region Accessors
+        public double MeasureSizeInSeconds => (double) BeatsPerMeasure / BPM * 60;
+        public double TotalSeconds => (int)Math.Ceiling(Measures.Length * MeasureSizeInSeconds);
+        public int GetTotalSamples(int sampleRate) => (int)(TotalSeconds * sampleRate);  // TODO: May have alignment problem
+        public int GetMeasureSizeInFloats(int sampleRate) => (int)(MeasureSizeInSeconds * sampleRate);  // TODO: May have alignment problem
+        public int GetBeatSizeInFloats(int sampleRate) => GetMeasureSizeInFloats(sampleRate) / BeatsPerMeasure;
+        #endregion
     }
 
     /// <summary>
@@ -110,6 +119,13 @@ namespace FluentSynth
     /// </summary>
     public static partial class MusicalScoreParser
     {
+        #region Constants
+        /// <summary>
+        /// Starting line for multi-instrument scores
+        /// </summary>
+        public static readonly string MultiInstrumentModeToggle = "Mode: Multi-Instrument";
+        #endregion
+
         #region Mapping
         /// <summary>
         /// Mapping from human-readable names to MIDI note number
@@ -497,7 +513,8 @@ namespace FluentSynth
             if (!scoreScript.Contains('[') && !scoreScript.Contains(']'))
                 return ParseLooseNotes(scoreScript);
             // Complete composition divided in measures
-            else if (scoreScript.Trim().StartsWith("Mode: Multi-Instrument"))
+            else if (scoreScript.Trim().StartsWith(MultiInstrumentModeToggle) 
+                || Regex.IsMatch(scoreScript, "^.*?:", RegexOptions.Multiline)) // Heuristic intended multi-instrument mode
                 return ParseCompleteScoreMultipleInstruments(scoreScript);
             else
                 return ParseCompleteScoreSingleInstrument(scoreScript);
@@ -510,22 +527,23 @@ namespace FluentSynth
             string[] contentLines = scoreScript
                 .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                 .Where(line => !line.TrimStart().StartsWith("#"))
-                .Skip(1)
+                .Skip(scoreScript.Contains(MultiInstrumentModeToggle) ? 1 : 0)
                 .ToArray();
 
             // Parse time signature
             ParseTimeSignature(contentLines.First(), out int beatsPerMeasure, out int beatSize, out int tempo);
 
             // Parse vocals
-            IEnumerable<string> vocalLines = contentLines.Where(line => ScoreVocalDefinitionLineRgex().IsMatch(line));
+            IEnumerable<string> vocalLines = contentLines.Where(line => ScoreVocalDefinitionLineRegex().IsMatch(line));
             Dictionary<string, string> vocals = vocalLines
-                .Select(line => ScoreVocalDefinitionLineRgex().Match(line))
+                .Select(line => ScoreVocalDefinitionLineRegex().Match(line))
                 .Select(match => (Key: match.Groups[1].Value, File: match.Groups[2].Value))
                 .ToDictionary(p => p.Key, p => p.File);
 
             // Parse measure content lines
             (string Line, int Index, (string Grouped, string Instrument) GroupedInstrument, bool IsValid, Measure[] Measures)[] lineMeasures = contentLines
                 .Skip(1)    // Skip time sianguare
+                .Where(line => !ScoreVocalDefinitionLineRegex().IsMatch(line))
                 .Select((line, index) => {
                     Match groupedInstrument = ScoreMultiInstrumentLineGroupedInstrumentRegex().Match(line);
                     string instrumentName = groupedInstrument.Groups[3].Value.Trim();
@@ -737,7 +755,7 @@ namespace FluentSynth
         [GeneratedRegex(@"^(([^:]*?):)?([^\[]*)\s*")]
         private static partial Regex ScoreMultiInstrumentLineGroupedInstrumentRegex();
         [GeneratedRegex(@"^([a-zA-Z0-9_$]*): (.*)$")]
-        private static partial Regex ScoreVocalDefinitionLineRgex();
+        private static partial Regex ScoreVocalDefinitionLineRegex();
         [GeneratedRegex("^(.*?)(/(\\d+))?(@(\\d+))?$")]
         private static partial Regex ScoreMeasureMusicalNoteWithDurationAndAttackRegex();
         #endregion

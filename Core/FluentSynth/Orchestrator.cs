@@ -1,6 +1,7 @@
 ﻿using MeltySynth;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using System.Reflection.PortableExecutable;
 
 namespace FluentSynth
 {
@@ -37,11 +38,8 @@ namespace FluentSynth
         /// </summary>
         public void Orchestrate(Score score, out float[] left, out float[] right, out int durationInMilliseconds)
         {
-            double measureSizeInSeconds = (double)score.BeatsPerMeasure / score.BPM * 60;
-            double totalSeconds = (int)Math.Ceiling(score.Measures.Length * measureSizeInSeconds);
-
             // The output buffer
-            int totalSamples = (int)(totalSeconds * SampleRate);  // TODO: May have alignment problem
+            int totalSamples = score.GetTotalSamples(SampleRate);
             float[] leftBuffer = new float[totalSamples];
             float[] rightBuffer = new float[totalSamples];
 
@@ -50,12 +48,12 @@ namespace FluentSynth
             MixMIDI(score, leftBuffer, rightBuffer, synthesizer);
 
             // Vocal Engine
-            (float[] Left, float[] Right) result = MixVocals(score, in leftBuffer, in rightBuffer, SampleRate);
+            MixVocals(score, in leftBuffer, in rightBuffer, SampleRate);
 
             // Return
-            durationInMilliseconds = (int)(totalSeconds * 1000);
-            left = result.Left;
-            right = result.Right;
+            durationInMilliseconds = (int)(score.TotalSeconds * 1000);
+            left = leftBuffer;
+            right = rightBuffer;
         }
         #endregion
 
@@ -65,14 +63,10 @@ namespace FluentSynth
         /// </summary>
         private void MixMIDI(Score score, float[] left, float[] right, Synthesizer synthesizer)
         {
-            double measureSizeInSeconds = (double)score.BeatsPerMeasure / score.BPM * 60;
-            int measureSizeInFloats = (int)(measureSizeInSeconds * SampleRate);  // TODO: May have alignment problem
-            int beatSizeInFloats = measureSizeInFloats / score.BeatsPerMeasure;
-
             for (int m = 0; m < score.Measures.Length; m++)
             {
                 Measure measure = score.Measures[m];
-                int spanStartIndex = (int)(m * measureSizeInSeconds * SampleRate); // TODO: May have alignment problem
+                int spanStartIndex = (int)(m * score.MeasureSizeInSeconds * SampleRate); // TODO: May have alignment problem
 
                 synthesizer.NoteOffAll(true);
 
@@ -99,12 +93,12 @@ namespace FluentSynth
                             else if (n.Pitch > 0)
                                 synthesizer.NoteOn(channel, n.Pitch, note.Velocity); // Signature: Channel (0 for both), key, velocity
                             else
-                                throw new NotImplementedException(); // synthesizer.NoteOffAll(false); // With release
+                                synthesizer.NoteOffAll(channel, false); // With release
                         }
 
                         // TODO: Change to block-based rendering per example here - https://github.com/sinshu/meltysynth
                         // We are almost there with our current multiple-section (channel) per measure structure
-                        int noteSize = beatSizeInFloats * (int)note.GetBeatCount(score.BeatSize);
+                        int noteSize = score.GetBeatSizeInFloats(SampleRate) * (int)note.GetBeatCount(score.BeatSize);
                         Span<float> leftSpan = new(left, spanStartIndex + previousNoteLengths, noteSize);
                         Span<float> rightSpan = new(right, spanStartIndex + previousNoteLengths, noteSize);
                         synthesizer.Render(leftSpan, rightSpan);
@@ -114,22 +108,66 @@ namespace FluentSynth
                 }
             }
         }
-        private (float[] Left, float[] Right) MixVocals(Score score, in float[] left, in float[] right, int sampleRate)
+        private void MixVocals(Score score, in float[] left, in float[] right, int sampleRate)
         {
-            byte[] bytes = Synth.ConvertChannels(left, right);
-            using MemoryStream memoryStream = new(bytes);
-            WaveFormat waveFormat = new(sampleRate, Synth.BitsPerSample, 2);
-            using RawSourceWaveStream waveStream = new(memoryStream, waveFormat);
-
-            using AudioFileReader audioReader = new(@"filepath")
+            for (int m = 0; m < score.Measures.Length; m++)
             {
-                Volume = 1.0f,
-            };
+                Measure measure = score.Measures[m];
+                int spanStartIndex = (int)(m * score.MeasureSizeInSeconds * SampleRate);
 
-            int sampleCount = left.Length;
+                for (int channel = 0; channel < measure.Sections.Length; channel++)
+                {
+                    MeasureSection section = measure.Sections[channel];
+
+                    // Don't handle MIDI instruments
+                    if (section.MIDIInstrument != Synth.Vocal)
+                        continue;
+
+                    int previousNoteLengths = 0;
+                    for (int b = 0; b < section.Notes.Length; b++)
+                    {
+                        Note note = section.Notes[b];
+                        foreach (NotePitch n in note.Pitches)
+                        {
+                            if (!n.IsVocal)
+                                continue; // Skip pauses
+                            else
+                            {
+                                AudioFileReader reader = new AudioFileReader(score.Vocals[n.VocalName]);
+                                int audioLength = (int)reader.Length;
+                                int clipLength = Math.Min(audioLength, score.GetTotalSamples(SampleRate) - spanStartIndex - previousNoteLengths);
+                                Span<float> leftSpan = new(left, spanStartIndex + previousNoteLengths, clipLength);
+                                Span<float> rightSpan = new(right, spanStartIndex + previousNoteLengths, clipLength);
+
+                                MixIn(leftSpan, rightSpan, sampleRate, reader);
+                            }
+                        }
+
+                        int noteSize = score.GetBeatSizeInFloats(sampleRate) * (int)note.GetBeatCount(score.BeatSize);
+                        previousNoteLengths += noteSize;
+                    }
+                }
+            }
+        }
+        private static void MixIn(Span<float> left, Span<float> right, int sampleRate, AudioFileReader mixin)
+        {
+            (float[] Left, float[] Right) result = MixAudio(left.ToArray(), right.ToArray(), sampleRate, mixin);
+
+            result.Left.AsSpan().CopyTo(left);
+            result.Right.AsSpan().CopyTo(right);
+        }
+        private static (float[] Left, float[] Right) MixAudio(float[] left, float[] right, int sampleRate, AudioFileReader reader)
+        {
+            WaveFormat waveFormat = new(sampleRate, Synth.BitsPerSample, 2);
+            byte[] bytes = Synth.ConvertChannels(left, right);
+
+            MemoryStream memoryStream = new(bytes);
+            RawSourceWaveStream waveStream = new(memoryStream, waveFormat);
+            
+            int sampleCount = new int[] { left.Length, right.Length, (int)reader.Length }.Min();
             float[] buffer = new float[sampleCount];
-            // MixingSampleProvider mixer = new(new[] { waveStream.ToSampleProvider(), ConvertWaveFormat(waveFormat, audioReader).ToSampleProvider() });
-            MixingSampleProvider mixer = new(new[] { waveStream.ToSampleProvider(), audioReader });
+
+            MixingSampleProvider mixer = new(new[] { waveStream.ToSampleProvider(), ConvertWaveFormat(waveFormat, reader).ToSampleProvider() });
             int read = mixer.Read(buffer, 0, sampleCount);
 
             return Synth.SplitChannels(buffer);
@@ -141,17 +179,11 @@ namespace FluentSynth
         {
             if (audioReader.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat)
             {
-                //WaveFloatTo16Provider pcmConverter = new(audioReader);
-                //return new WaveFormatConversionProvider(targetWaveFormat, pcmConverter);
-                return new WaveFloatTo16Provider(audioReader);
+                WaveFloatTo16Provider pcmConverter = new(audioReader);
+                return new WaveFormatConversionProvider(targetWaveFormat, pcmConverter);
             }
             else if (audioReader.WaveFormat.Encoding == WaveFormatEncoding.Pcm)
-            {
-                //using WaveFormatConversionStream sampleRateConverter = new(new WaveFormat(waveFormat.SampleRate, audioReader.WaveFormat.BitsPerSample, audioReader.WaveFormat.Channels), audioReader);
-                //using WaveFormatConversionStream bitDepthConverter = new(new WaveFormat(waveFormat.SampleRate, waveFormat.BitsPerSample, audioReader.WaveFormat.Channels), sampleRateConverter);
-                //using WaveFormatConversionStream channelsConverter = new(waveFormat, bitDepthConverter);
                 return new WaveFormatConversionStream(targetWaveFormat, audioReader);
-            }
             throw new ApplicationException("Unexpected format.");
         }
         #endregion
