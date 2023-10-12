@@ -15,9 +15,19 @@ namespace FluentMusic
                 PrintHelp();
             else if (args.Length == 1)
             {
-                string filePath = Path.GetFullPath(args.First());
-                if (File.Exists(filePath) && Path.GetExtension(filePath) == ".sf2")
-                    REPL(filePath);
+                string soundFontFilePath = Path.GetFullPath(args.First());
+                if (File.Exists(soundFontFilePath) && Path.GetExtension(soundFontFilePath) == ".sf2")
+                    REPL(soundFontFilePath);
+            }
+            else if (args.Length == 2)
+            {
+                string soundFontFilePath = Path.GetFullPath(args.First());
+                string fsmnFilePath = Path.GetFullPath(args.Last());
+                if (File.Exists(soundFontFilePath) && Path.GetExtension(soundFontFilePath) == ".sf2")
+                {
+                    new Synth(soundFontFilePath).Play(File.ReadAllText(fsmnFilePath), out int duration);
+                    Thread.Sleep(duration);
+                }
             }
         }
         #endregion
@@ -34,7 +44,7 @@ namespace FluentMusic
                 string input = Console.ReadLine();
                 try
                 {
-                    new Synth(soundFontFilePath).Play(input);
+                    new Synth(soundFontFilePath).Play(input, out _);
                 }
                 catch (Exception e)
                 {

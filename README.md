@@ -10,6 +10,13 @@ Main inspirations:
 
 The [Core library](./Core/FluentSynth) will provide preliminary FluentSynth for Pure-oriented MIDI-supported but more targeting raw waveform procedural generation
 
+Example:
+
+```FluentSynth
+(120) 4/4
+{Piano} [C C G G] [A A G/2] [F F E E] [D D C/2] [G G F F] [E E D/2] [G G F F] [E E D/2] [C C G G] [A A G/2] [F F E E] [D D C/2]
+```
+
 ## Methodology (Preliminary Note)
 
 This library provides raw API for manipulating and assembling sin waves and notes, and relies on NAudio for music playback. By reading or creating MIDI files on the fly, one can represent musical ideas on a higher level.
@@ -29,7 +36,7 @@ For specifically, either single sequence of notes, or sequence of measures, or e
 
 * Sequence of notes, separated by space: `c d e f g h a b`
 * Sequence of measures: `[c d e f]`
-* Entire composition (in a single line): `(120) 4/4 {Piano} [c c g g] [a a g/2]`
+* Entire composition (in a single line): `(120) 4/4 [C C G G] [A A G/2] [F F E E] [D D C/2] [G G F F] [E E D/2] [G G F F] [E E D/2] [C C G G] [A A G/2] [F F E E] [D D C/2]`
 
 ### Musical Notes
 
@@ -63,6 +70,17 @@ A note can be played together with other notes at the same time by using `|` to 
 Sharps are indicated by a pound sign (#) and flats are indicated by an ampersand (&): `[c# d& e f# g&]`.
 
 At the moment there is no capacity to parse something like `f##` or `g&&` - you need to manually convert it to `g` or `f`.
+
+### Multiple Instruments
+
+Syntax is slightly different from single-line measures.
+
+The score must start with `Mode: Multi-Instrument` line.  
+Then the next valid content line must specify tempo and time signature: `(120) 4/4`.  
+One can use `#` to denote comment lines.
+
+Each "group" line is like this: `<Group Name>:<Group Instrument> <Measures>`. The `<Group Name>:<Group Instrument>` part uniquely identify a group. It's possible to have the same `<Group Name>` with different instruments, which are identified as different groups. Different groups do not need to have same number of measures - they will play together for so long as the measures can support.
+E.g. `Piano 1:Piano [C C G G] [A A G/2] [F F E E] [D D C/2]`
 
 ## TODO
 

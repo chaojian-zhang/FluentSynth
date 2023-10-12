@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Reflection.PortableExecutable;
+using System.Text.RegularExpressions;
 
 namespace FluentSynth
 {
@@ -81,7 +82,7 @@ namespace FluentSynth
     /// Provides parsing for musical score written in plain text;
     /// The format is roughly a modified version of Guido Music Notation.
     /// </summary>
-    public static class MusicalScoreParser
+    public static partial class MusicalScoreParser
     {
         #region Mapping
         /// <summary>
@@ -467,22 +468,96 @@ namespace FluentSynth
             if (!scoreScript.Contains('[') && !scoreScript.Contains(']'))
                 return ParseLooseNotes(scoreScript);
             // Complete composition divided in measures
+            else if (scoreScript.Trim().StartsWith("Mode: Multi-Instrument"))
+                return ParseCompleteScoreMultipleInstruments(scoreScript);
             else
-                return ParseCompleteScore(scoreScript);
+                return ParseCompleteScoreSingleInstrument(scoreScript);
         }
+        /// <summary>
+        /// Parses score for multi-instrument mode.
+        /// </summary>
+        public static Score ParseCompleteScoreMultipleInstruments(string scoreScript)
+        {
+            string[] contentLines = scoreScript
+                .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => !line.TrimStart().StartsWith("#"))
+                .Skip(1)
+                .ToArray();
 
-        private static Score ParseCompleteScore(string scoreScript)
+            ParseTimeSignature(contentLines.First(), out int beatsPerMeasure, out int beatSize, out int tempo);
+
+            (string Line, int Index, (string Grouped, string Instrument) GroupedInstrument, bool IsValid, Measure[] Measures)[] lineMeasures = contentLines
+                .Skip(1)
+                .Select((line, index) => {
+                    Match groupedInstrument = ScoreMultiInstrumentLineGroupedInstrumentRegex().Match(line);
+
+                    return (
+                        Line: line,
+                        Index: index,
+                        GroupedInstrument: groupedInstrument.Success 
+                            ? (Grouped: groupedInstrument.Groups[1].Value.Trim(), Instrument: groupedInstrument.Groups[2].Value.Trim()) 
+                            : (null, null), // Named grouped:instrument
+                        IsValid: groupedInstrument.Success,
+                        Measures: ScoreMeasureRegex()
+                            .Matches(line)
+                            .Select(m => m.Value)
+                            .Select(measure => CreateMeasure(measure, beatsPerMeasure, beatSize))
+                            .ToArray()
+                    );
+                })
+                .ToArray();
+
+            // Validate lines
+            if (lineMeasures.Any(l => !l.IsValid))
+                throw new ArgumentException($"Invalid line - missing grouped:instrument: {lineMeasures.First(l => l.IsValid)}");
+
+            // Assign section instruments
+            Dictionary<(string Grouped, string Instrument), Measure[]> instrumentGroups = lineMeasures
+                .GroupBy(m => m.GroupedInstrument)
+                .Select(g => (Key: g.Key, Measures: g.SelectMany(g => g.Measures).ToArray()))
+                .ToDictionary(g => g.Key, g => g.Measures);
+            foreach (var group in instrumentGroups)
+                foreach (var measure in group.Value)
+                    foreach (var section in measure.Sections)
+                        section.MIDIInstrument = InstrumentNameMapping[group.Key.Instrument];
+
+            // Assemble/zip measures
+            int maxUniqueSections = instrumentGroups.Max(g => g.Value.Count());
+            Measure[] assemble = new Measure[maxUniqueSections];
+            for (int i = 0; i < maxUniqueSections; i++)
+            {
+                assemble[i] = new Measure()
+                {
+                    Sections = instrumentGroups
+                        .Where(g => g.Value.Length > i)
+                        .Select(g => g.Value[i])
+                        .Select(m => m.Sections.Single())
+                        .ToArray()
+                };
+            }
+
+            return new Score()
+            {
+                BeatsPerMeasure = beatsPerMeasure,
+                BPM = tempo,
+                BeatSize = beatSize,
+                Measures = assemble.ToArray(),
+            };
+        }
+        private static Score ParseCompleteScoreSingleInstrument(string scoreScript)
         {
             scoreScript = ParseTimeSignature(scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo);
 
             Measure[] measures = scoreScript
                 .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .SelectMany(line => Regex.Matches(line, @"\[.*?\]").Select(m => m.Value))
-                .Select(measure => CreateMeasure(measure, beatsPerMeasure, beatSize)).ToArray();
+                .Where(line => !line.TrimStart().StartsWith("#"))
+                .SelectMany(line => ScoreMeasureRegex().Matches(line).Select(m => m.Value))
+                .Select(measure => CreateMeasure(measure, beatsPerMeasure, beatSize))
+                .ToArray();
             return new Score()
             {
                 BeatsPerMeasure = beatsPerMeasure,
-                BPM = 120,
+                BPM = tempo,
                 BeatSize = beatSize,
                 Measures = measures,
             };
@@ -551,19 +626,23 @@ namespace FluentSynth
         /// </summary>
         public static Measure CreateMeasure(string script, int beatsPerMeasure, int beatSize)
         {
+            Match match = ScoreMeasureRegex().Match(script);
+            string instrument = match.Groups[2].Value;
+            string section = match.Groups[3].Value;
+
             Measure measure = new()
             {
                 Sections = new MeasureSection[]
                 {
                     new MeasureSection()
                     {
-                        MIDIInstrument = Synth.AcousticGrandPiano,
-                        Notes = script.Trim().TrimStart('[').TrimEnd(']').Split(' ').Select(n => CreateNote(n)).ToArray()
+                        MIDIInstrument = string.IsNullOrEmpty(instrument) ? Synth.AcousticGrandPiano : InstrumentNameMapping[instrument],
+                        Notes = section.Split(' ').Select(n => CreateNote(n)).ToArray()
                     }
                 }
             };
 
-            MeasureSection invalidSection = measure.Sections.FirstOrDefault(s => s.GetBeatCount(beatSize) > beatsPerMeasure);
+            MeasureSection invalidSection = measure.Sections.FirstOrDefault(s => s.GetBeatCount(beatSize) != beatsPerMeasure);
             if (invalidSection != null)
                 throw new ArgumentException($"Invalid number of beats: {script}; Should be {beatsPerMeasure} beats per measure - got {invalidSection.GetBeatCount(beatSize)} beats.");
 
@@ -591,6 +670,13 @@ namespace FluentSynth
             else
                 throw new ArgumentException($"Canot parse note: {note}");
         }
+        #endregion
+
+        #region Regular Expressions
+        [GeneratedRegex(@"({([a-zA-Z ]+)})?\s*\[(.*?)\]")]
+        private static partial Regex ScoreMeasureRegex();
+        [GeneratedRegex(@"^([^:]*?):([^\[]*)\s*")]
+        private static partial Regex ScoreMultiInstrumentLineGroupedInstrumentRegex();
         #endregion
     }
 }

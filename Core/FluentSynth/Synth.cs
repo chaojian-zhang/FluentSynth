@@ -1457,12 +1457,16 @@ namespace FluentSynth
         /// <summary>
         /// Play duel channel floating-point samples
         /// </summary>
+        /// <remarks>
+        /// Notice for the purpose of ease of use (and fluent API), we are not releasing any resources.
+        /// TODO: It's going to be hard if we want to handle proper resource releasing; It's also not necessasry for the purpose it serves.
+        /// </remarks>
         public static WaveOutEvent Play(int sampleRate, float[] left, float[] right)
         {
-            var bytes = ConvertChannels(left, right);
-            var memoryStream = new MemoryStream(bytes);
-            var waveStream = new RawSourceWaveStream(memoryStream, new WaveFormat(sampleRate, 16, 2));
-            var outputDevice = new WaveOutEvent();
+            byte[] bytes = ConvertChannels(left, right);
+            MemoryStream memoryStream = new(bytes);
+            RawSourceWaveStream waveStream = new(memoryStream, new WaveFormat(sampleRate, 16, 2));
+            WaveOutEvent outputDevice = new();
 
             outputDevice.Init(waveStream);
             outputDevice.Play();
@@ -1471,6 +1475,10 @@ namespace FluentSynth
         /// <summary>
         /// Play single-channel floating-point samples
         /// </summary>
+        /// <remarks>
+        /// Notice for the purpose of ease of use (and fluent API), we are not releasing any resources.
+        /// TODO: It's going to be hard if we want to handle proper resource releasing; It's also not necessasry for the purpose it serves.
+        /// </remarks>
         public static WaveOutEvent Play(int sampleRate, float[] channel)
         {
             var bytes = ConvertChannel(channel);
@@ -1485,12 +1493,16 @@ namespace FluentSynth
         /// <summary>
         /// Play score object.
         /// </summary>
-        public WaveOutEvent Play(Score score)
+        /// <remarks>
+        /// Notice for the purpose of ease of use (and fluent API), we are not releasing any resources.
+        /// TODO: It's going to be hard if we want to handle proper resource releasing; It's also not necessasry for the purpose it serves.
+        /// </remarks>
+        public WaveOutEvent Play(Score score, out int durationInMilliseconds)
         {
             int sampleRate = DefaultSampleRate;
 
             new Orchestrator(sampleRate, SoundFontFilePath)
-                .Orchestrate(score, out float[] left, out float[] right);
+                .Orchestrate(score, out float[] left, out float[] right, out durationInMilliseconds);
 
             return Play(sampleRate, left, right);
         }
@@ -1498,7 +1510,11 @@ namespace FluentSynth
         /// <summary>
         /// Play specific MIDI file
         /// </summary>
-        public WaveOutEvent PlayMIDIFile(string filePath)
+        /// <remarks>
+        /// Notice for the purpose of ease of use (and fluent API), we are not releasing any resources.
+        /// TODO: It's going to be hard if we want to handle proper resource releasing; It's also not necessasry for the purpose it serves.
+        /// </remarks>
+        public WaveOutEvent PlayMIDIFile(string filePath, out int durationInMilliseconds)
         {
             int sampleRate = DefaultSampleRate;
             Synthesizer synthesizer = new(SoundFontFilePath, sampleRate);
@@ -1511,19 +1527,23 @@ namespace FluentSynth
             float[] right = new float[(int)(sampleRate * midiFile.Length.TotalSeconds)];
             sequencer.Render(left, right);
 
+            durationInMilliseconds = (int)(midiFile.Length.TotalSeconds * 1000);
             return Play(sampleRate, left);
         }
         /// <summary>
         /// Parse and play ascore.
         /// </summary>
-        public WaveOutEvent Play(string scoreScript)
+        public WaveOutEvent Play(string scoreScript, out int durationInMilliseconds)
         {
             Score score = MusicalScoreParser.Parse(scoreScript);
-            return Play(score);
+            return Play(score, out durationInMilliseconds);
         }
         #endregion
 
         #region Helpers
+        /// <remarks>
+        /// PCM audio supports up to 8 channels of audio, which includes left, right, center, left surround, right surround, left back, right back, and a subwoofer channel.
+        /// </remarks>
         private static byte[] ConvertChannels(float[] left, float[] right)
         {
             var bytes = left
