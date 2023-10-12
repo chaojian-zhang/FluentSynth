@@ -35,6 +35,15 @@ namespace FluentMusic
         #region Routines
         private static void REPL(string soundFontFilePath)
         {
+            Console.WriteLine("""
+                Welcoe to Fluent Music, powered by Fluent Synth.
+                ? Start typing notes or enter complete scores for playback.
+                - Use `sample` to play some sample music.
+                - Use `save <File Path>` to save history to a file.
+                - Use `stop` to stop last playback.
+                - Use `play <File Path>` to play from file.
+                """);
+
             string fileName = Path.GetFileNameWithoutExtension(soundFontFilePath);
             string extension = Path.GetExtension(soundFontFilePath).TrimStart('.').ToUpper();
             Console.WriteLine($"{fileName} ({extension})");

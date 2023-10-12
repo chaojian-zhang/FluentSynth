@@ -21,7 +21,10 @@ namespace FluentSynth
     }
 
     /// <summary>
-    /// Represents a measure for a specific instrument
+    /// Represents a measure for a specific instrument;
+    /// This corresponds to a specific instrument channel from MIDI's perspective.
+    /// Each song is allowed to have 16 unique channels.
+    /// (Anything more than that might require mixing using NAudio on the waveform level)
     /// </summary>
     public sealed class MeasureSection
     {

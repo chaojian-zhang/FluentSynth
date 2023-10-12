@@ -71,6 +71,8 @@ namespace FluentSynth
                                 throw new NotImplementedException(); // synthesizer.NoteOffAll(false); // With release
                         }
 
+                        // TODO: Change to block-based rendering per example here - https://github.com/sinshu/meltysynth
+                        // We are almost there with our current multiple-section (channel) per measure structure
                         int noteSize = beatSizeInFloats * (int)note.GetBeatCount(score.BeatSize);
                         Span<float> leftSpan = new(left, spanStartIndex + previousNoteLengths, noteSize);
                         Span<float> rightSpan = new(right, spanStartIndex + previousNoteLengths, noteSize);
