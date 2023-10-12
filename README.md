@@ -125,6 +125,10 @@ Audio Editing (Exposed only through Pure Scripting):
 
 - [ ] Quick cut and format conversion
 
+## Known Issues
+
+- [ ] When playing MIDI files directly from command line using FluentMusic, loading time is long and it's not memory efficient because the program loads everything at once without streaming. For the purpose of this program (targeting more on on-demand synth), we probably won't address this issue any time soon.
+
 ## References
 
 Main references:

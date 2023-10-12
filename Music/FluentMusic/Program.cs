@@ -1,4 +1,5 @@
 ﻿using FluentSynth;
+using NAudio.Wave;
 
 namespace FluentMusic
 {
@@ -22,23 +23,38 @@ namespace FluentMusic
             else if (args.Length == 2)
             {
                 string soundFontFilePath = Path.GetFullPath(args.First());
-                string fsmnFilePath = Path.GetFullPath(args.Last());
+                string inputFilePath = Path.GetFullPath(args.Last());
                 if (File.Exists(soundFontFilePath) && Path.GetExtension(soundFontFilePath) == ".sf2")
                 {
-                    Console.WriteLine($"Play {Path.GetFileNameWithoutExtension(fsmnFilePath)}...");
-                    new Synth(soundFontFilePath).Play(File.ReadAllText(fsmnFilePath), out int duration);
+                    CurrentPlaying = PlayMediaFile(soundFontFilePath, inputFilePath, out int duration);
                     Thread.Sleep(duration);
                 }
+            }
+        }
+
+        private static WaveOutEvent PlayMediaFile(string soundFontFilePath, string inputFilePath, out int duration)
+        {
+            Console.WriteLine($"Play {Path.GetFileNameWithoutExtension(inputFilePath)}...");
+            switch (Path.GetExtension(inputFilePath))
+            {
+                case ".fs":
+                    return new Synth(soundFontFilePath).Play(File.ReadAllText(inputFilePath), out duration);
+                case ".mid":
+                    return new Synth(soundFontFilePath).PlayMIDIFile(inputFilePath, out duration);
+                default:
+                    duration = 0;
+                    return null;
             }
         }
         #endregion
 
         #region Routines
+        private static WaveOutEvent CurrentPlaying;
         private static void REPL(string soundFontFilePath)
         {
             Console.WriteLine("""
                 Welcoe to Fluent Music, powered by Fluent Synth.
-                ? Start typing notes or enter complete scores for playback.
+                ? Start typing notes or enter complete scores for playback. Type `exit` to quit.
                 - Use `sample` to play some sample music.
                 - Use `save <File Path>` to save history to a file.
                 - Use `stop` to stop last playback.
@@ -47,18 +63,35 @@ namespace FluentMusic
 
             string fileName = Path.GetFileNameWithoutExtension(soundFontFilePath);
             string extension = Path.GetExtension(soundFontFilePath).TrimStart('.').ToUpper();
-            Console.WriteLine($"{fileName} ({extension})");
+            Console.WriteLine($"Now playing using: {fileName} ({extension})");
+            List<string> history = new List<string>();
             while (true)
             {
                 Console.Write("> ");
                 string input = Console.ReadLine();
-                try
+
+                if (input == "exit")
+                    break;
+                else if (input == "sample")
+                    CurrentPlaying = new Synth(soundFontFilePath).Play("[C C G G] [A A G/2] [F F E E] [D D C/2]", out _);
+                else if (input == "stop")
+                    CurrentPlaying?.Stop();
+                else if (input.StartsWith("save "))
+                    File.WriteAllLines(input["save ".Length..].Trim().Trim('"'), history);
+                else if (input.StartsWith("play "))
+                    CurrentPlaying = PlayMediaFile(soundFontFilePath, input["play ".Length..].Trim().Trim('"'), out _);
+                else
                 {
-                    new Synth(soundFontFilePath).Play(input, out _);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
+                    // Play melodies
+                    try
+                    {
+                        history.Add(input);
+                        new Synth(soundFontFilePath).Play(input, out _);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
             }
         }
