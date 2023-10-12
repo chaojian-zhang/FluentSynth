@@ -187,5 +187,42 @@ namespace FluentSynth
             throw new ApplicationException("Unexpected format.");
         }
         #endregion
+
+        #region Helpers
+        static (float[] Left, float[] Right) MelodySynth(Synthesizer synthesizer, int sampleRate)
+        {
+            var blockSize = sampleRate / 10; // The length of a block is 0.1 sec.
+            var blockCount = 30; // The entire output is blockCount * blockSize (in this case 3 sec)
+
+            // Define the melody: A single row indicates the start timing (in terms of blockID), end timing, and pitch.
+            (int StartBlock, int EndBlock, int Pitch)[] data = new[]
+            {
+                (5, 10, 60),
+                (10, 15, 64),
+                (15, 25, 67)
+            };
+
+            // The output buffer
+            int totalSamples = blockSize * blockCount;
+            float[] left = new float[totalSamples];
+            float[] right = new float[totalSamples];
+
+            for (int t = 0; t < blockCount; t++)
+            {
+                foreach ((int StartBlock, int EndBlock, int Pitch) in data)
+                {
+                    if (t == StartBlock) synthesizer.NoteOn(0, Pitch, 100);
+                    if (t == EndBlock) synthesizer.NoteOff(0, Pitch);
+                }
+
+                // Render the block.
+                var blockLeft = left.AsSpan(blockSize * t, blockSize);
+                var blockRight = right.AsSpan(blockSize * t, blockSize);
+                synthesizer.Render(blockLeft, blockRight); // I don't get how it can sustain "state" of a note; Looks like inside the implement there is a Voice class which might actually maintain the states of things while NoteOn and NoteOff are actually sent as commands
+            }
+
+            return (left, right);
+        }
+        #endregion
     }
 }
