@@ -1,11 +1,6 @@
 ﻿using MeltySynth;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using System.Reflection.PortableExecutable;
-using static System.Collections.Specialized.BitVector32;
-using System.Threading.Channels;
-using static System.Formats.Asn1.AsnWriter;
-using System;
 
 namespace FluentSynth
 {
@@ -77,7 +72,7 @@ namespace FluentSynth
                 // Update instruments
                 for (int c = 0; c < measure.Sections.Length; c++)
                 {
-                    MeasureSection channel = measure.Sections[c]; // A channel is an independent path over which messages travel to their destination. There are 16 channels per MIDI device. A track in your sequencer program plays one instrument over a single channel. The MIDI messages in the track find their way to the instrument over that channel.
+                    MeasureSection channel = measure.Sections[c];
                     // Send a program change command (0xC0) to the synthesizer in order to change instrument
                     synthesizer.ProcessMidiMessage(c, 0xC0, channel.MIDIInstrument, 0);
                 }

@@ -70,6 +70,16 @@ namespace FluentSynth
     /// </summary>
     public sealed class Measure
     {
+        /// <summary>
+        /// Sections represent the "channels" or "tracks" as divided into measures.
+        /// This can be used to represent different instruments on a score;
+        /// Or different tracks in a DAW application.
+        /// Each instrument or instrument group takes up one section and are all collected inside a particular measure, which divides the total time (duration) of the musical piece (score) in Fluent Synth.
+        /// </summary>
+        /// <remarks>
+        /// A channel is an independent path over which messages travel to their destination. 
+        /// There are 16 channels per MIDI device. A track in your sequencer program plays one instrument over a single channel. The MIDI messages in the track find their way to the instrument over that channel.
+        /// </remarks>
         public MeasureSection[] Sections { get; set; }
     }
     /// <summary>
@@ -105,10 +115,31 @@ namespace FluentSynth
         #endregion
 
         #region Accessors
+        /// <summary>
+        /// Duration of a measure in seconds
+        /// </summary>
         public double MeasureSizeInSeconds => (double) BeatsPerMeasure / BPM * 60;
-        public double TotalSeconds => (int)Math.Ceiling(Measures.Length * MeasureSizeInSeconds);
-        public int GetTotalSamples(int sampleRate) => (int)(TotalSeconds * sampleRate);  // TODO: May have alignment problem
-        public int GetMeasureSizeInFloats(int sampleRate) => (int)(MeasureSizeInSeconds * sampleRate);  // TODO: May have alignment problem
+        /// <summary>
+        /// Total duration of the entire score
+        /// </summary>
+        public double TotalSeconds => Math.Ceiling(Measures.Length * MeasureSizeInSeconds);
+        /// <summary>
+        /// Total number of samples as determined by sample rate throughout the duration of the music piece.
+        /// </summary>
+        /// <remarks>
+        /// TODO: May have alignment problem
+        /// </remarks>
+        public int GetTotalSamples(int sampleRate) => (int)(TotalSeconds * sampleRate);
+        /// <summary>
+        /// Get how many samples is required for each measure.
+        /// </summary>
+        /// <remarks>
+        /// TODO: May have alignment problem
+        /// </remarks>
+        public int GetMeasureSizeInFloats(int sampleRate) => (int)(MeasureSizeInSeconds * sampleRate);
+        /// <summary>
+        /// Get how many samples is required for a bit as deteremined by sample rate.
+        /// </summary>
         public int GetBeatSizeInFloats(int sampleRate) => GetMeasureSizeInFloats(sampleRate) / BeatsPerMeasure;
         #endregion
     }

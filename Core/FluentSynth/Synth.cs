@@ -1627,6 +1627,9 @@ namespace FluentSynth
                 .ToArray();
             return bytes;
         }
+        /// <summary>
+        /// Converts a single channel float (range in [-1, 1]) waveform into PCM (16-bit short)
+        /// </summary>
         public static byte[] ConvertChannel(float[] channel)
         {
             var bytes = channel
@@ -1636,7 +1639,7 @@ namespace FluentSynth
                     var bytes = BitConverter.GetBytes(value);
                     // Each sample is just byte sequence of a short
                     return new byte[] {
-                bytes[0], bytes[1]
+                        bytes[0], bytes[1]
                     };
                 })
                 .ToArray();
