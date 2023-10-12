@@ -669,30 +669,55 @@ namespace FluentSynth
         {
             scoreScript = ParseTimeSignature(scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo);
 
-            Measure[] measures = scoreScript
+            List<Measure> measures = new();
+            double currentBeats = 0;
+            List<Note> currentNotes = new();
+            foreach (Note note in scoreScript
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Select((note, index) => (Note: note, Index: index))
-                .GroupBy(g => g.Index / beatsPerMeasure)
-                .Select(g => new Measure()
+                .Select(note => CreateNote(note)))
+            {
+                double noteBeatCount = note.GetBeatCount(beatSize);
+                if (currentBeats + noteBeatCount > beatsPerMeasure)
+                    throw new ApplicationException();
+                else
                 {
-                    Sections = new MeasureSection[]
-                    {
-                            new MeasureSection()
-                            {
-                                MIDIInstrument = Synth.AcousticGrandPiano,
-                                Notes = g.Select(i => CreateNote(i.Note)).ToArray()
-                            }
-                    }
-                })
-                .ToArray();
+                    currentNotes.Add(note);
+                    currentBeats += noteBeatCount;
+                }
+
+                if (currentBeats == beatsPerMeasure)
+                {
+                    AddNotes(measures, currentNotes);
+                    currentBeats = 0;
+                }
+            }
+            if (currentNotes.Count != 0)
+                AddNotes(measures, currentNotes);
 
             return new Score()
             {
                 BeatsPerMeasure = beatsPerMeasure,
                 BPM = tempo,
                 BeatSize = beatSize,
-                Measures = measures,
+                Measures = measures.ToArray(),
             };
+
+            static void AddNotes(List<Measure> measures, List<Note> currentNotes)
+            {
+                measures.Add(new Measure()
+                {
+                    Sections = new MeasureSection[]
+                    {
+                        new MeasureSection()
+                        {
+                            MIDIInstrument = Synth.AcousticGrandPiano,
+                            Notes = currentNotes.ToArray()
+                        }
+                    }
+                });
+
+                currentNotes.Clear();
+            }
         }
         private static string ParseTimeSignature(string scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo)
         {
