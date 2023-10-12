@@ -2,6 +2,10 @@
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System.Reflection.PortableExecutable;
+using static System.Collections.Specialized.BitVector32;
+using System.Threading.Channels;
+using static System.Formats.Asn1.AsnWriter;
+using System;
 
 namespace FluentSynth
 {
@@ -68,45 +72,35 @@ namespace FluentSynth
                 Measure measure = score.Measures[m];
                 int spanStartIndex = (int)(m * score.MeasureSizeInSeconds * SampleRate); // TODO: May have alignment problem
 
+                // Stop all previous notes
                 synthesizer.NoteOffAll(true);
-
-                for (int channel = 0; channel < measure.Sections.Length; channel++)
+                // Update instruments
+                for (int c = 0; c < measure.Sections.Length; c++)
                 {
-                    // A channel is an independent path over which messages travel to their destination. There are 16 channels per MIDI device. A track in your sequencer program plays one instrument over a single channel. The MIDI messages in the track find their way to the instrument over that channel.
-                    MeasureSection section = measure.Sections[channel];
+                    MeasureSection channel = measure.Sections[c]; // A channel is an independent path over which messages travel to their destination. There are 16 channels per MIDI device. A track in your sequencer program plays one instrument over a single channel. The MIDI messages in the track find their way to the instrument over that channel.
+                    // Send a program change command (0xC0) to the synthesizer in order to change instrument
+                    synthesizer.ProcessMidiMessage(c, 0xC0, channel.MIDIInstrument, 0);
+                }
 
-                    // Don't handle vocals in MIDI engine
-                    if (section.MIDIInstrument == Synth.Vocal)
-                        continue;
-
-                    // Update instrument
-                    synthesizer.ProcessMidiMessage(channel, 0xC0, section.MIDIInstrument, 0); // Send a program change command (0xC0) to the synthesizer in order to change instrument
-
-                    int previousNoteLengths = 0;
-                    for (int b = 0; b < section.Notes.Length; b++)
+                foreach ((int SamplesElapsed, int Duration, (int Channel, Note Note)[] NoteChanges) in EnumerateNoteChanges(score, SampleRate, measure))
+                {
+                    // Perform new actions
+                    foreach ((int Channel, Note Note) in NoteChanges)
                     {
-                        Note note = section.Notes[b];
-                        foreach (NotePitch n in note.Pitches)
+                        foreach (NotePitch pitch in Note.Pitches)
                         {
-                            if (n.IsVocal)
-                                throw new ApplicationException("Vocals are not handled in MIDI engine.");
-                            else if (n.Pitch > 0)
-                                synthesizer.NoteOn(channel, n.Pitch, note.Velocity); // Signature: Channel (0 for both), key, velocity
-                            else
-                                synthesizer.NoteOffAll(channel, false); // With release
+                            // Typically we just have On and Pause notes, and no off event is needed
+                            synthesizer.NoteOffAll(Channel, false); // With release
+                            if (pitch.Pitch != Synth.StopNote)
+                                // Signature: Channel (0 for both), key, velocity
+                                synthesizer.NoteOn(Channel, pitch.Pitch, Note.Velocity);
                         }
-
-                        // TODO: Change to block-based rendering per example here - https://github.com/sinshu/meltysynth
-                        // Define the melody: block ID indicates timing
-
-                        // We are almost there with our current multiple-section (channel) per measure structure
-                        int noteSize = score.GetBeatSizeInFloats(SampleRate) * (int)note.GetBeatCount(score.BeatSize);
-                        Span<float> leftSpan = new(left, spanStartIndex + previousNoteLengths, noteSize);
-                        Span<float> rightSpan = new(right, spanStartIndex + previousNoteLengths, noteSize);
-                        synthesizer.Render(leftSpan, rightSpan);
-
-                        previousNoteLengths += noteSize;
                     }
+
+                    // Render out the waveform up to the point of action                        
+                    Span<float> leftSpan = new(left, spanStartIndex + SamplesElapsed, Duration);
+                    Span<float> rightSpan = new(right, spanStartIndex + SamplesElapsed, Duration);
+                    synthesizer.Render(leftSpan, rightSpan);
                 }
             }
         }
@@ -131,7 +125,8 @@ namespace FluentSynth
                         Note note = section.Notes[b];
                         foreach (NotePitch n in note.Pitches)
                         {
-                            if (!n.IsVocal)
+                            // The only non-vocal notes in a vocal track are the pauses
+                            if (n.Pitch == Synth.StopNote)
                                 continue; // Skip pauses
                             else
                             {
@@ -177,40 +172,46 @@ namespace FluentSynth
 
             return Synth.SplitChannels(buffer);
         }
-        private static void MixInMelody()
+        private static IEnumerable<(int SamplesElapsed, int Duration, (int Channel, Note Note)[] NoteChanges)> EnumerateNoteChanges(Score score, int sampleRate, Measure measure)
         {
+            // We are almost there with our current multiple-section (channel) per measure structure
+            // To play Synthesizer as an instrument, we just need to figure out when to press and release each key, for each channel
+            // And it's inherently a time-based approach; Or more precisely, an action-sequence based approach
+            // We just need to divide all the actions into sequences and render each fragment at the time of all actions
 
+            // Find smallest time unit in all channels
+            int smallestUnit = measure.Sections
+                .Where(s => s.MIDIInstrument != Synth.Vocal) // Don't handle vocals in MIDI engine
+                .Max(s => s.Notes.Max(n => n.Duration));
+            List<(int Channel, Note Note)>[] actions = Enumerable.Range(0, smallestUnit)
+                .Select(i => new List<(int Channel, Note Note)>())
+                .ToArray();
+
+            // Enumerate and gather all actions
+            for (int c = 0; c < measure.Sections.Length; c++)
+            {
+                MeasureSection channel = measure.Sections[c];
+
+                int previousNoteBeatCounts = 0;
+                foreach (Note note in channel.Notes)
+                {
+                    actions[previousNoteBeatCounts].Add((c, note));
+
+                    previousNoteBeatCounts += (int)note.GetBeatCount(smallestUnit);
+                }
+            }
+
+            // Provide enumeration
+            int duration = score.GetMeasureSizeInFloats(sampleRate) / smallestUnit;
+            for (int i = 0; i < actions.Length; i++)
+            {
+                int samplesElapsed = i * duration;
+                yield return (samplesElapsed, duration, actions[i].ToArray());
+            }
         }
         #endregion
 
         #region Helpers
-        private static (float[] Left, float[] Right) MelodySynth(Synthesizer synthesizer, int sampleRate, (int Channel, int StartBlock, int EndBlock, int Pitch, int Attack)[] uniquePitches)
-        {
-            int blockSize = sampleRate / 10; // The length of a block is 0.1 sec.
-            int blockCount = 30; // The entire output is blockCount * blockSize (in this case 3 sec)
-
-            // The output buffer
-            int totalSamples = blockSize * blockCount;
-            float[] left = new float[totalSamples];
-            float[] right = new float[totalSamples];
-
-            for (int t = 0; t < blockCount; t++)
-            {
-                foreach ((int Channel, int StartBlock, int EndBlock, int Pitch, int Attack) in uniquePitches)
-                {
-                    if (t == StartBlock) synthesizer.NoteOn(Channel, Pitch, Attack);
-                    if (t == EndBlock) synthesizer.NoteOff(Channel, Pitch);
-                }
-
-                // Render the block.
-                var blockLeft = left.AsSpan(blockSize * t, blockSize);
-                var blockRight = right.AsSpan(blockSize * t, blockSize);
-                synthesizer.Render(blockLeft, blockRight);
-                // remark-cz: I didn't fully get how it can sustain "state" of a note - looks like inside the implement there is a Voice class which might actually maintain the states of things while NoteOn and NoteOff are actually sent as commands
-            }
-
-            return (left, right);
-        }
         private static IWaveProvider ConvertWaveFormat(WaveFormat targetWaveFormat, AudioFileReader audioReader)
         {
             if (audioReader.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat)

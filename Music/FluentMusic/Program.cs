@@ -25,6 +25,7 @@ namespace FluentMusic
                 string fsmnFilePath = Path.GetFullPath(args.Last());
                 if (File.Exists(soundFontFilePath) && Path.GetExtension(soundFontFilePath) == ".sf2")
                 {
+                    Console.WriteLine($"Play {Path.GetFileNameWithoutExtension(fsmnFilePath)}...");
                     new Synth(soundFontFilePath).Play(File.ReadAllText(fsmnFilePath), out int duration);
                     Thread.Sleep(duration);
                 }
