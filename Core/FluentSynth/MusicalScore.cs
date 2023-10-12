@@ -549,11 +549,15 @@ namespace FluentSynth
         }
         private static Score ParseCompleteScoreSingleInstrument(string scoreScript)
         {
-            scoreScript = ParseTimeSignature(scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo);
+            // Preprocessing: remove comment lines
+            scoreScript = string.Join(Environment.NewLine, scoreScript
+                .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => !line.TrimStart().StartsWith("#")));
+
+            scoreScript = ParseTimeSignature(scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo).Trim();
 
             Measure[] measures = scoreScript
                 .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Where(line => !line.TrimStart().StartsWith("#"))
                 .SelectMany(line => ScoreMeasureRegex().Matches(line).Select(m => m.Value))
                 .Select(measure => CreateMeasure(measure, beatsPerMeasure, beatSize))
                 .ToArray();
