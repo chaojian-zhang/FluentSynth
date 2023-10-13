@@ -167,6 +167,7 @@ namespace FluentSynth
         {
             // Special Beats
             { "_", Synth.StopNote },
+            { "-", Synth.StopNote },
 
             // Simplified Names
             { "A'", Synth.A5 },
