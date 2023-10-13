@@ -178,26 +178,29 @@ namespace FluentSynth
             int smallestUnit = measure.Sections
                 .Where(s => s.MIDIInstrument != Synth.Vocal) // Don't handle vocals in MIDI engine
                 .Max(s => s.Notes.Max(n => n.Duration));
-            List<(int Channel, Note Note)>[] actions = Enumerable.Range(0, smallestUnit)
+            double scaler = score.BeatsPerMeasure / score.BeatSize;
+            int quantiles = (int)(smallestUnit * scaler);
+            // This list represents all the discret actions needed to represent all the note changes within this measure
+            List<(int Channel, Note Note)>[] actions = Enumerable.Range(0, quantiles)
                 .Select(i => new List<(int Channel, Note Note)>())
                 .ToArray();
 
-            // Enumerate and gather all actions
+            // Enumerate and gather all actions: we try to insert the notes into approriate time slots in the pre-allocated action sequence
             for (int c = 0; c < measure.Sections.Length; c++)
             {
                 MeasureSection channel = measure.Sections[c];
 
-                int previousNoteBeatCounts = 0;
+                int previousNoteSlotsCounts = 0;
                 foreach (Note note in channel.Notes)
                 {
-                    actions[previousNoteBeatCounts].Add((c, note));
+                    actions[previousNoteSlotsCounts].Add((c, note));
 
-                    previousNoteBeatCounts += (int)note.GetBeatCount(smallestUnit);
+                    previousNoteSlotsCounts += (int)(note.GetBeatCount(score.BeatSize) * scaler);
                 }
             }
 
             // Provide enumeration
-            int duration = score.GetMeasureSizeInFloats(sampleRate) / smallestUnit;
+            int duration = score.GetMeasureSizeInFloats(sampleRate) / actions.Length;
             for (int i = 0; i < actions.Length; i++)
             {
                 int samplesElapsed = i * duration;

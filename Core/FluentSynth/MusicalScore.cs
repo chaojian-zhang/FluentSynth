@@ -763,7 +763,7 @@ namespace FluentSynth
                 scoreScript = scoreScript[timeSignatureDefinition.Length..];
             }
 
-            return scoreScript;
+            return scoreScript.Trim();
         }
         #endregion
 
