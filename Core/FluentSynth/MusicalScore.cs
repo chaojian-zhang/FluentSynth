@@ -19,6 +19,7 @@ namespace FluentSynth
     /// <param name="Pitches">A single MIDI note or a chord of notes, or a vocal</param>
     /// <param name="Duration">Duration: 1, 2, 4, 8, 16, 32</param>
     /// <param name="Velocity">The MIDI velocity range is from 0–127, with 127 being the loudest</param>
+    /// <param name="ExtendedDuration">How many additional 1/2 durations should we extend from Duration of this note</param>
     public record Note(NotePitch[] Pitches, int Duration, int Velocity, int ExtendedDuration)
     {
         /// <summary>
