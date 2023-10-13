@@ -19,14 +19,16 @@ namespace FluentSynth
     /// <param name="Pitches">A single MIDI note or a chord of notes, or a vocal</param>
     /// <param name="Duration">Duration: 1, 2, 4, 8, 16, 32</param>
     /// <param name="Velocity">The MIDI velocity range is from 0–127, with 127 being the loudest</param>
-    public record Note(NotePitch[] Pitches, int Duration, int Velocity)
+    public record Note(NotePitch[] Pitches, int Duration, int Velocity, bool Extended)
     {
         /// <summary>
         /// How many beats is this note
         /// </summary>
         public double GetBeatCount(int beatSize)
         {
-            return (double) beatSize / Duration;
+            return Extended 
+                ? (double) beatSize * 1.5 / Duration
+                : (double) beatSize / Duration;
         }
     }
 
@@ -679,7 +681,7 @@ namespace FluentSynth
             {
                 double noteBeatCount = note.GetBeatCount(beatSize);
                 if (currentBeats + noteBeatCount > beatsPerMeasure)
-                    throw new ApplicationException();
+                    throw new ArgumentException("Beats duration exceeds measure.");
                 else
                 {
                     currentNotes.Add(note);
@@ -798,6 +800,7 @@ namespace FluentSynth
             {
                 string notesString = match.Groups[1].Value;
                 string durationString = match.Groups[3].Value;
+                bool extendedDuration = match.Groups[2].Value.EndsWith('.');
                 string attackString = match.Groups[5].Value;
 
                 NotePitch[] pitches = notesString
@@ -810,7 +813,8 @@ namespace FluentSynth
                 return new Note(
                     pitches,
                     string.IsNullOrEmpty(durationString) ? 4 : int.Parse(durationString),
-                    string.IsNullOrEmpty(attackString) ? 100 : int.Parse(attackString)
+                    string.IsNullOrEmpty(attackString) ? 100 : int.Parse(attackString),
+                    extendedDuration
                 );
             }
             else
@@ -825,7 +829,7 @@ namespace FluentSynth
         private static partial Regex ScoreMultiInstrumentLineGroupedInstrumentRegex();
         [GeneratedRegex(@"^([a-zA-Z0-9_$]*): (.*)$")]
         private static partial Regex ScoreVocalDefinitionLineRegex();
-        [GeneratedRegex("^(.*?)(/(\\d+))?(@(\\d+))?$")]
+        [GeneratedRegex(@"^(.*?)(/(\d+)\.?)?(@(\d+))?$")]
         private static partial Regex ScoreMeasureMusicalNoteWithDurationAndAttackRegex();
         #endregion
     }

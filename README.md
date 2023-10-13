@@ -88,6 +88,8 @@ Default duration for a note is a quarter note. To indicate a different rhythm, i
 |sixteenth note|16|
 |thiry-second note|32|
 
+One dot `.` is equivalent to multiplying it by $3/2$, e.g. `C/4.` is `C/4 + C/8`.
+
 ### Chords
 
 A note can be played together with other notes at the same time by using `|` to connect them. E.g. (Middle C, E, G with different attacks) `C|E|G/4@100`; When specified in this fashion, the notes must have the same duration and velocity.
