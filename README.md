@@ -277,7 +277,7 @@ MIDI Instruments (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs))
 |Clavinet|**Piano**|*7*|`Clavinet`|
 |Celesta|**Chromatic Percussion**|*8*|`Celesta`|
 |Glockenspiel|**Chromatic Percussion**|*9*|`Glockenspiel`|
-|Music box|**Chromatic Percussion**|*10*|`Musicbox`|
+|Music Box|**Chromatic Percussion**|*10*|`MusicBox`|
 |Vibraphone|**Chromatic Percussion**|*11*|`Vibraphone`|
 |Marimba|**Chromatic Percussion**|*12*|`Marimba`|
 |Xylophone|**Chromatic Percussion**|*13*|`Xylophone`|

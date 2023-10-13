@@ -416,7 +416,7 @@ namespace FluentSynth
             { "Clavinet", Synth.Clavinet },
             { "Celesta", Synth.Celesta },
             { "Glockenspiel", Synth.Glockenspiel },
-            { "Music box", Synth.Musicbox },
+            { "Music Box", Synth.MusicBox },
             { "Vibraphone", Synth.Vibraphone },
             { "Marimba", Synth.Marimba },
             { "Xylophone", Synth.Xylophone },

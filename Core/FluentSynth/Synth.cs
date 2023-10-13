@@ -869,10 +869,10 @@ namespace FluentSynth
         /// </summary>
         public const int Glockenspiel = 9;
         /// <summary>
-        /// MIDI Instrument: Music box (10)
+        /// MIDI Instrument: Music Box (10)
         /// Class: Chromatic Percussion
         /// </summary>
-        public const int Musicbox = 10;
+        public const int MusicBox = 10;
         /// <summary>
         /// MIDI Instrument: Vibraphone (11)
         /// Class: Chromatic Percussion
