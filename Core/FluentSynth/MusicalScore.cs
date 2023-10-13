@@ -796,13 +796,16 @@ namespace FluentSynth
         /// </summary>
         public static Note CreateNote(string note, Dictionary<string, string> vocals = null)
         {
+            int defaultDuration = 4;
+            int defaultAttack = 100;
+
             Match match = ScoreMeasureMusicalNoteWithDurationAndAttackRegex().Match(note);
             if (match.Success)
             {
                 string notesString = match.Groups[1].Value;
                 string durationString = match.Groups[3].Value;
-                bool extendedDuration = match.Groups[2].Value.EndsWith('.');
-                string attackString = match.Groups[5].Value;
+                bool extendedDuration = !string.IsNullOrEmpty(match.Groups[4].Value);
+                string attackString = match.Groups[6].Value;
 
                 NotePitch[] pitches = notesString
                     .Split('|')
@@ -813,8 +816,8 @@ namespace FluentSynth
                     .ToArray();
                 return new Note(
                     pitches,
-                    string.IsNullOrEmpty(durationString) ? 4 : int.Parse(durationString),
-                    string.IsNullOrEmpty(attackString) ? 100 : int.Parse(attackString),
+                    string.IsNullOrEmpty(durationString) ? defaultDuration : int.Parse(durationString),
+                    string.IsNullOrEmpty(attackString) ? defaultAttack : int.Parse(attackString),
                     extendedDuration
                 );
             }
@@ -830,7 +833,7 @@ namespace FluentSynth
         private static partial Regex ScoreMultiInstrumentLineGroupedInstrumentRegex();
         [GeneratedRegex(@"^([a-zA-Z0-9_$]*): (.*)$")]
         private static partial Regex ScoreVocalDefinitionLineRegex();
-        [GeneratedRegex(@"^(.*?)(/(\d+)\.?)?(@(\d+))?$")]
+        [GeneratedRegex(@"^(.*?)(/(\d+))?(\.?)(@(\d+))?$")]
         private static partial Regex ScoreMeasureMusicalNoteWithDurationAndAttackRegex();
         #endregion
     }
