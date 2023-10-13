@@ -670,33 +670,38 @@ namespace FluentSynth
 
         private static Score ParseLooseNotes(string scoreScript)
         {
+            scoreScript = RemoveCommentLines(scoreScript);
             scoreScript = ParseTimeSignature(scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo);
-            scoreScript = ParseDefaultInstrument(scoreScript, out string defaultInstrument);
-
             List<Measure> measures = new();
-            double currentBeats = 0;
-            List<Note> currentNotes = new();
-            foreach (Note note in scoreScript
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Select(note => CreateNote(note)))
-            {
-                double noteBeatCount = note.GetBeatCount(beatSize);
-                if (currentBeats + noteBeatCount > beatsPerMeasure)
-                    throw new ArgumentException("Beats duration exceeds measure.");
-                else
-                {
-                    currentNotes.Add(note);
-                    currentBeats += noteBeatCount;
-                }
 
-                if (currentBeats == beatsPerMeasure)
+            foreach (var line in SplitScriptLines(scoreScript))
+            {
+                string remainingLine = ParseDefaultInstrument(line, out string defaultInstrument);
+
+                double currentBeats = 0;
+                List<Note> currentNotes = new();
+                foreach (Note note in remainingLine
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(note => CreateNote(note)))
                 {
-                    AddNotes(measures, currentNotes, defaultInstrument);
-                    currentBeats = 0;
+                    double noteBeatCount = note.GetBeatCount(beatSize);
+                    if (currentBeats + noteBeatCount > beatsPerMeasure)
+                        throw new ArgumentException("Beats duration exceeds measure.");
+                    else
+                    {
+                        currentNotes.Add(note);
+                        currentBeats += noteBeatCount;
+                    }
+
+                    if (currentBeats == beatsPerMeasure)
+                    {
+                        AddNotes(measures, currentNotes, defaultInstrument);
+                        currentBeats = 0;
+                    }
                 }
+                if (currentNotes.Count != 0)
+                    AddNotes(measures, currentNotes, defaultInstrument);
             }
-            if (currentNotes.Count != 0)
-                AddNotes(measures, currentNotes, defaultInstrument);
 
             return new Score()
             {
@@ -714,6 +719,12 @@ namespace FluentSynth
                 {
                     defaultInstrument = instrumentDefinition.Groups[1].Value;
                     scoreScript = scoreScript[instrumentDefinition.Length..];
+                }
+                // Pre-emptively guess intention of assigning default instrument even if the syntax is not `{Instrument Name}` at the start of line
+                else if (InstrumentNameMapping.ContainsKey(scoreScript.Split(' ').First()))
+                {
+                    defaultInstrument = scoreScript.Split(' ').First();
+                    scoreScript = scoreScript[defaultInstrument.Length..].TrimStart();
                 }
 
                 return scoreScript;
@@ -809,10 +820,16 @@ namespace FluentSynth
 
                 NotePitch[] pitches = notesString
                     .Split('|')
-                    .Select(pitchName => (vocals != null && vocals.ContainsKey(pitchName)) 
-                        ? new NotePitch(Synth.VocalNote, pitchName)
-                        : new NotePitch(NoteNameMapping[pitchName.ToUpper()], null)
-                    )
+                    .Select(pitchName => {
+                        if (vocals != null && vocals.ContainsKey(pitchName))
+                            return new NotePitch(Synth.VocalNote, pitchName);
+                        else
+                        {
+                            if (!NoteNameMapping.ContainsKey(pitchName.ToUpper()))
+                               throw new ArgumentException($"Note name `{pitchName}` is invalid.");
+                            else return new NotePitch(NoteNameMapping[pitchName.ToUpper()], null);
+                        }
+                    })
                     .ToArray();
                 return new Note(
                     pitches,
@@ -823,6 +840,19 @@ namespace FluentSynth
             }
             else
                 throw new ArgumentException($"Canot parse note: {note}");
+        }
+        #endregion
+
+        #region Helpers
+        private static string RemoveCommentLines(string scoreScript)
+        {
+            return String.Join(Environment.NewLine, SplitScriptLines(scoreScript));
+        }
+        private static IEnumerable<string> SplitScriptLines(string scoreScript)
+        {
+            return scoreScript
+                .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => !line.TrimStart().StartsWith('#'));
         }
         #endregion
 
