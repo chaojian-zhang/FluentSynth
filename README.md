@@ -88,7 +88,8 @@ Default duration for a note is a quarter note. To indicate a different rhythm, i
 |sixteenth note|16|
 |thiry-second note|32|
 
-One dot `.` is equivalent to multiplying it by $3/2$, e.g. `C/4.` is `C/4 + C/8`.
+One dot `.` is equivalent to adding an additional $1/2$ of current duration (and thus giving $3/2$), e.g. `C/4.` is (only in terms of duration) `C/4 + C/8` (those will nonetheless sound differently).  
+More dots adds additional "halves", e.g. `C/4..` is equivalent to `C/4 + C/8 * 2` or `C/2`, and `C/4...` is equivalent to `C/4 + C/8 * 3`.
 
 ### Chords
 
@@ -167,6 +168,7 @@ Main references:
 * MIDI Note Numbres and Center Frequencies: https://www.inspiredacoustics.com/en/MIDI_note_numbers_and_center_frequencies
 * MIDI Instrument number: https://fmslogo.sourceforge.io/manual/midi-instrument.html
 * Guido Music Notation: https://wiki.ccarh.org/wiki/Guido_Music_Notation
+* Guido Layout Engine: https://github.com/grame-cncm/guidolib
 
 MIDI Notes (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs)):
 
