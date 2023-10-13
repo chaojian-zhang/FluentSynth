@@ -668,6 +668,7 @@ namespace FluentSynth
         private static Score ParseLooseNotes(string scoreScript)
         {
             scoreScript = ParseTimeSignature(scoreScript, out int beatsPerMeasure, out int beatSize, out int tempo);
+            scoreScript = ParseDefaultInstrument(scoreScript, out string defaultInstrument);
 
             List<Measure> measures = new();
             double currentBeats = 0;
@@ -687,12 +688,12 @@ namespace FluentSynth
 
                 if (currentBeats == beatsPerMeasure)
                 {
-                    AddNotes(measures, currentNotes);
+                    AddNotes(measures, currentNotes, defaultInstrument);
                     currentBeats = 0;
                 }
             }
             if (currentNotes.Count != 0)
-                AddNotes(measures, currentNotes);
+                AddNotes(measures, currentNotes, defaultInstrument);
 
             return new Score()
             {
@@ -702,7 +703,19 @@ namespace FluentSynth
                 Measures = measures.ToArray(),
             };
 
-            static void AddNotes(List<Measure> measures, List<Note> currentNotes)
+            static string ParseDefaultInstrument(string scoreScript, out string defaultInstrument)
+            {
+                defaultInstrument = "Piano";
+                Match instrumentDefinition = Regex.Match(scoreScript, @"^{(.*?)}");
+                if (instrumentDefinition.Success)
+                {
+                    defaultInstrument = instrumentDefinition.Groups[1].Value;
+                    scoreScript = scoreScript[instrumentDefinition.Length..];
+                }
+
+                return scoreScript;
+            }
+            static void AddNotes(List<Measure> measures, List<Note> currentNotes, string defaultInstrument)
             {
                 measures.Add(new Measure()
                 {
@@ -710,7 +723,7 @@ namespace FluentSynth
                     {
                         new MeasureSection()
                         {
-                            MIDIInstrument = Synth.AcousticGrandPiano,
+                            MIDIInstrument = InstrumentNameMapping[defaultInstrument],
                             Notes = currentNotes.ToArray()
                         }
                     }
