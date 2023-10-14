@@ -195,7 +195,7 @@ namespace FluentSynth
                 {
                     actions[previousNoteSlotsCounts].Add((c, note));
 
-                    previousNoteSlotsCounts += (int)(note.GetBeatCount(score.BeatSize) * scaler);
+                    previousNoteSlotsCounts += (int)note.GetBeatCount(smallestUnit);
                 }
             }
 
