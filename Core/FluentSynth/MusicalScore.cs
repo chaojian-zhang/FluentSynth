@@ -674,16 +674,20 @@ namespace FluentSynth
 
                 double currentBeats = 0;
                 List<Note> currentNotes = new();
-                foreach (Note note in remainingLine
+                var notes = remainingLine
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(note => CreateNote(note)))
+                    .Select(note => (Symbol: note, Note: CreateNote(note)))
+                    .ToArray();
+                for (int i = 0; i < notes.Length; i++)
                 {
-                    double noteBeatCount = note.GetBeatCount(beatSize);
+                    (string Symbol, Note Note) note = notes[i];
+
+                    double noteBeatCount = note.Note.GetBeatCount(beatSize);
                     if (currentBeats + noteBeatCount > beatsPerMeasure)
-                        throw new ArgumentException("Beats duration exceeds measure.");
+                        throw new ArgumentException($"Beats duration exceeds measure: {note.Symbol} @{i} ({(i > 0 ? $"after {notes[i-1].Symbol}" : "at the beginning")})");
                     else
                     {
-                        currentNotes.Add(note);
+                        currentNotes.Add(note.Note);
                         currentBeats += noteBeatCount;
                     }
 
