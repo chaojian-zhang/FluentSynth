@@ -1,6 +1,7 @@
 ﻿using MeltySynth;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using System.Threading.Channels;
 
 namespace FluentSynth
 {
@@ -74,7 +75,14 @@ namespace FluentSynth
                 {
                     MeasureSection channel = measure.Sections[c];
                     // Send a program change command (0xC0) to the synthesizer in order to change instrument
-                    synthesizer.ProcessMidiMessage(c, 0xC0, channel.MIDIInstrument, 0);
+                    // Chanel 9 is specially reserved for drum kits by the synthesizer
+                    if (channel.MIDIInstrument >= 0)
+                        synthesizer.ProcessMidiMessage(c, 0xC0, channel.MIDIInstrument, 0);
+                    else if (channel.MIDIInstrument <= Synth.DrumKitChannelsSpecialOffset)
+                        synthesizer.ProcessMidiMessage(Synth.DrumKitInstrumentChannel, 0xC0, Synth.GetDrumKitInstrumentNumber(channel.MIDIInstrument), 0);
+                    else
+                        // Don't expect any other MIDIInstrument at this time
+                        throw new ApplicationException("Invalid MIDI Instrument number in MIDI engine processing.");
                 }
 
                 foreach ((int SamplesElapsed, int Duration, (int Channel, Note Note)[] NoteChanges) in EnumerateNoteChanges(score, SampleRate, measure))
@@ -193,7 +201,7 @@ namespace FluentSynth
                 int previousNoteSlotsCounts = 0;
                 foreach (Note note in channel.Notes)
                 {
-                    actions[previousNoteSlotsCounts].Add((c, note));
+                    actions[previousNoteSlotsCounts].Add((GetChannel(c, channel), note));
 
                     previousNoteSlotsCounts += (int)note.GetBeatCount(smallestUnit);
                 }
@@ -205,6 +213,17 @@ namespace FluentSynth
             {
                 int samplesElapsed = i * duration;
                 yield return (samplesElapsed, duration, actions[i].ToArray());
+            }
+
+            static int GetChannel(int instrumentGroupOrder, MeasureSection channel)
+            {
+                if (channel.MIDIInstrument >= 0)
+                    return instrumentGroupOrder;
+                else if (channel.MIDIInstrument <= Synth.DrumKitChannelsSpecialOffset)
+                    return Synth.DrumKitInstrumentChannel;
+                else
+                    // Don't expect any other MIDIInstrument at this time
+                    throw new ApplicationException("Invalid MIDI Instrument number in MIDI engine processing.");
             }
         }
         #endregion

@@ -379,6 +379,56 @@ namespace FluentSynth
             { "A#0", Synth.As0 },
             { "B&0", Synth.Bb0 },
             { "A0", Synth.A0 },
+
+            // Drum Notes (Standard)
+            { "ABD", Synth.B1 },
+            { "BD", Synth.C2 },
+            { "SS", Synth.Db2 },
+            { "AS", Synth.D2 },
+            { "HC", Synth.Eb2 },
+            { "ES", Synth.E2 },
+            { "LFT", Synth.F2 },
+            { "CHH", Synth.Gb2 },
+            { "HFT", Synth.G2 },
+            { "RHH", Synth.Ab2 },
+            { "LT", Synth.A2 },
+            { "OHH", Synth.Bb2 },
+            { "LMT", Synth.B2 },
+            { "HMT", Synth.C3 },
+            { "CC1", Synth.Db3 },
+            { "HT", Synth.D3 },
+            { "RC1", Synth.Eb3 },
+            { "CC", Synth.E3 },
+            { "RB", Synth.F3 },
+            { "T", Synth.Gb3 },
+            { "SC", Synth.G3 },
+            { "Co", Synth.Ab3 },
+            { "CS2", Synth.A3 },
+            { "V", Synth.Bb3 },
+            { "RC2", Synth.B3 },
+            { "HB", Synth.C4 },
+            { "LB", Synth.Db4 },
+            { "MHC", Synth.D4 },
+            { "OHC", Synth.Eb4 },
+            { "LC", Synth.E4 },
+            { "HTi", Synth.F4 },
+            { "LTi", Synth.Gb4 },
+            { "HA", Synth.G4 },
+            { "LA", Synth.Ab4 },
+            { "Ca", Synth.A4 },
+            { "M", Synth.Bb4 },
+            { "SW", Synth.B4 },
+            { "LW", Synth.C5 },
+            { "SG", Synth.Db5 },
+            { "LG", Synth.D5 },
+            { "Cl", Synth.Eb5 },
+            { "HWB", Synth.E5 },
+            { "LWB", Synth.F5 },
+            { "MC", Synth.Gb5 },
+            { "OC", Synth.G5 },
+            { "MT", Synth.Ab5 },
+            { "OT", Synth.A5 },
+            { "S", Synth.Bb5 },
         };
         /// <summary>
         /// Mapping from human-readable names to MIDI instrument number
@@ -387,8 +437,9 @@ namespace FluentSynth
         {
             // Special track
             { "Vocal", Synth.Vocal },
+            { "Drum", Synth.StandardDrumKit },
 
-            // Standard Class
+            // Standard Instrument Class
             { "Piano", Synth.AcousticGrandPiano },
             { "Chromatic Percussion", Synth.Celesta },
             { "Organ", Synth.HammondOrgan },
@@ -405,6 +456,18 @@ namespace FluentSynth
             { "Ethnic", Synth.Sitar },
             { "Percussive", Synth.TinkleBell },
             { "Sound Effects", Synth.GuitarFretNoise },
+
+            // Drum Kits
+            { "Standard Drum Kit", Synth.StandardDrumKit },
+            { "Room Drum Kit", Synth.RoomDrumKit },
+            { "Power Drum Kit", Synth.PowerDrumKit },
+            { "Electric Drum Kit", Synth.ElectricDrumKit },
+            { "TR808 Drum Kit", Synth.TR808DrumKit },
+            { "Jazz Drum Kit", Synth.JazzDrumKit },
+            { "Brush Kit", Synth.BrushDrumKit },
+            { "Orchestral Drum Kit", Synth.OrchestralDrumKit },
+            { "Fix Room Drum Kit", Synth.FixRoomDrumKit },
+            { "MT-32 Drum Kit", Synth.MT32DrumKit },
 
             // Fully Named
             { "Acoustic Grand Piano", Synth.AcousticGrandPiano },

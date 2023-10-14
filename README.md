@@ -471,6 +471,9 @@ Many General MIDI compatible synths/sound fonts have additional drum kits, often
 |25|Rap TR808 Drums|
 |32|Jazz Drum Kit|
 |40|Brush Kit|
+|48|Orchestral Drum Kit|
+|49|Fix Room Drum Kit|
+|127|MT-32 Drum Kit|
 
 A special note about the Brush Kit:
 

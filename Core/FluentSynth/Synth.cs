@@ -819,6 +819,73 @@ namespace FluentSynth
         public const int Vocal = -1;
 
         /// <summary>
+        /// Indicates drum channel offset
+        /// </summary>
+        /// <remarks>
+        /// The additional offsets below correspond to drum kit numbers specified in Arachno SoundFont - Version 1.0.sf2 SoundFont
+        /// </remarks>
+        public const int DrumKitChannelsSpecialOffset = -2;
+        /// <summary>
+        /// This is a special channel (known as Channel 10) by most MIDI synth for drum kit use
+        /// </summary>
+        public const int DrumKitInstrumentChannel = 9;
+        /// <summary>
+        /// Computes the correct instrument number from drum kit channel offset value
+        /// </summary>
+        public static int GetDrumKitInstrumentNumber(int drumKit)
+            => Math.Abs(drumKit - DrumKitChannelsSpecialOffset);
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int StandardDrumKit = DrumKitChannelsSpecialOffset - 0;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int RoomDrumKit = DrumKitChannelsSpecialOffset - 8;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int PowerDrumKit = DrumKitChannelsSpecialOffset - 16;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int ElectricDrumKit = DrumKitChannelsSpecialOffset - 24;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int TR808DrumKit = DrumKitChannelsSpecialOffset - 25;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int JazzDrumKit = DrumKitChannelsSpecialOffset - 32;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int BrushDrumKit = DrumKitChannelsSpecialOffset - 40;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int OrchestralDrumKit = DrumKitChannelsSpecialOffset - 48;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int FixRoomDrumKit = DrumKitChannelsSpecialOffset - 49;
+        /// <summary>
+        /// Represents a non-instrumental drum kit track.
+        /// This is not a MIDI instrument and is special handled by MIDI engine.
+        /// </summary>
+        public const int MT32DrumKit = DrumKitChannelsSpecialOffset - 127;
+
+        /// <summary>
         /// MIDI Instrument: Acoustic Grand Piano (0)
         /// Class: Piano
         /// </summary>
