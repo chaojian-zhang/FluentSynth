@@ -1594,7 +1594,14 @@ namespace FluentSynth
 
             return Play(sampleRate, left, right);
         }
-
+        /// <summary>
+        /// Parse and play ascore.
+        /// </summary>
+        public WaveOutEvent Play(string scoreScript, out int durationInMilliseconds)
+        {
+            Score score = MusicalScoreParser.Parse(scoreScript);
+            return Play(score, out durationInMilliseconds);
+        }
         /// <summary>
         /// Play specific MIDI file
         /// </summary>
@@ -1602,11 +1609,59 @@ namespace FluentSynth
         /// Notice for the purpose of ease of use (and fluent API), we are not releasing any resources.
         /// TODO: It's going to be hard if we want to handle proper resource releasing; It's also not necessasry for the purpose it serves.
         /// </remarks>
-        public WaveOutEvent PlayMIDIFile(string filePath, out int durationInMilliseconds)
+        public WaveOutEvent PlayMIDIFile(string midiFilePath, out int durationInMilliseconds)
         {
             int sampleRate = DefaultSampleRate;
-            Synthesizer synthesizer = new(SoundFontFilePath, sampleRate);
-            MidiFile midiFile = new(filePath);
+            (float[] Left, float[] Right, int DurationInMilliseconds) result = SynthMIDIFile(sampleRate, SoundFontFilePath, midiFilePath);
+
+            durationInMilliseconds = result.DurationInMilliseconds;
+            return Play(sampleRate, result.Left, result.Right);
+        }
+        #endregion
+
+        #region Rendering
+        /// <summary>
+        /// Render out a synthesized score into music file
+        /// </summary>
+        public void Render(string scoreScript, string outputFilePath)
+        {
+            int sampleRate = DefaultSampleRate;
+
+            Score score = MusicalScoreParser.Parse(scoreScript);
+            new Orchestrator(sampleRate, SoundFontFilePath)
+                .Orchestrate(score, out float[] left, out float[] right, out _);
+            Save(sampleRate, left, right, outputFilePath);
+        }
+        /// <summary>
+        /// Render out a synthezied MIDI file into music file
+        /// </summary>
+        public void RenderMIDIFile(string midiFilePath, string outputFilePath)
+        {
+            int sampleRate = DefaultSampleRate;
+            (float[] Left, float[] Right, int DurationInMilliseconds) result = SynthMIDIFile(sampleRate, SoundFontFilePath, midiFilePath);
+            Save(sampleRate, result.Left, result.Right, outputFilePath);
+        }
+        #endregion
+
+        #region Subroutines
+        /// <summary>
+        /// Save left and right channels into music file
+        /// </summary>
+        public static void Save(int sampleRate, float[] left, float[] right, string outputFilePath)
+        {
+            byte[] bytes = ConvertChannels(left, right);
+            using MemoryStream memoryStream = new(bytes);
+            using RawSourceWaveStream waveStream = new(memoryStream, new WaveFormat(sampleRate, BitsPerSample, 2));
+            WaveFileWriter.CreateWaveFile(outputFilePath, waveStream);
+        }
+        /// <summary>
+        /// Synthesize MIDI file into left and right channels of floating array samples
+        /// </summary>
+        public static (float[] Left, float[] Right, int DurationInMilliseconds) SynthMIDIFile(int defaultSampleRate, string soundFontFilePath, string midiFilePath)
+        {
+            int sampleRate = defaultSampleRate;
+            Synthesizer synthesizer = new(soundFontFilePath, sampleRate);
+            MidiFile midiFile = new(midiFilePath);
 
             MidiFileSequencer sequencer = new(synthesizer);
             sequencer.Play(midiFile, false);
@@ -1615,16 +1670,9 @@ namespace FluentSynth
             float[] right = new float[(int)(sampleRate * midiFile.Length.TotalSeconds)];
             sequencer.Render(left, right);
 
-            durationInMilliseconds = (int)(midiFile.Length.TotalSeconds * 1000);
-            return Play(sampleRate, left);
-        }
-        /// <summary>
-        /// Parse and play ascore.
-        /// </summary>
-        public WaveOutEvent Play(string scoreScript, out int durationInMilliseconds)
-        {
-            Score score = MusicalScoreParser.Parse(scoreScript);
-            return Play(score, out durationInMilliseconds);
+            int durationInMilliseconds = (int)(midiFile.Length.TotalSeconds * 1000);
+
+            return (left, right, durationInMilliseconds);
         }
         #endregion
 

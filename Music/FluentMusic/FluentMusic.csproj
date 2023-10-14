@@ -8,6 +8,7 @@
     <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
     <PublishReadyToRun>true</PublishReadyToRun>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

@@ -12,26 +12,95 @@ namespace FluentMusic
         #region Main
         public static void Main(string[] args)
         {
-            if (args.Length == 0 || args.FirstOrDefault() == "--help")
+            if (args.Length == 0)
+            {
                 PrintHelp();
-            else if (args.Length == 1)
+                Console.ReadLine(); // Block on input so the console window doesn't just quit when launched from file explorer
+            }
+            else if (args.FirstOrDefault() == "--help")
+                PrintHelp();
+            else
+            {
+                switch (args.First().ToLower())
+                {
+                    case "render":
+                        RenderMusic(args.Skip(1).ToArray());
+                        break;
+                    case "play":
+                        PlayMusic(args.Skip(1).ToArray());
+                        break;
+                    default:
+                        DefaultHandling(args);
+                        break;
+                }
+            }
+        }
+        private static void DefaultHandling(string[] args)
+        {
+            if (args.Length == 1)
             {
                 string soundFontFilePath = Path.GetFullPath(args.First());
                 if (File.Exists(soundFontFilePath) && Path.GetExtension(soundFontFilePath) == ".sf2")
                     REPL(soundFontFilePath);
             }
             else if (args.Length == 2)
+                PlayMusic(args);
+        }
+        private static void PlayMusic(string[] args)
+        {
+            if (args.Length != 2)
             {
-                string soundFontFilePath = Path.GetFullPath(args.First());
-                string inputFilePath = Path.GetFullPath(args.Last());
-                if (File.Exists(soundFontFilePath) && Path.GetExtension(soundFontFilePath) == ".sf2")
-                {
-                    CurrentPlaying = PlayMediaFile(soundFontFilePath, inputFilePath, out int duration);
-                    Thread.Sleep(duration);
-                }
+                Console.WriteLine("Not enough arguments. Expect: <Sound File> <Score/MIDI>");
+                return;
+            }
+
+            string soundFontFilePath = Path.GetFullPath(args.First());
+            string inputFilePath = Path.GetFullPath(args.Last());
+            if (!File.Exists(soundFontFilePath))
+            {
+                Console.WriteLine($"SoundFond file doesn't exist: {soundFontFilePath}");
+                return;
+            }
+            if (!File.Exists(inputFilePath))
+            {
+                Console.WriteLine($"Input file doesn't exist: {inputFilePath}");
+                return;
+            }
+
+            if (Path.GetExtension(soundFontFilePath) == ".sf2")
+            {
+                CurrentPlaying = PlayMediaFile(soundFontFilePath, inputFilePath, out int duration);
+                Thread.Sleep(duration);
             }
         }
+        private static void RenderMusic(string[] args)
+        {
+            if (args.Length != 3)
+            {
+                Console.WriteLine("Not enough arguments. Expect: <Sound File> <Score/MIDI> <Output>");
+                return;
+            }
 
+            string soundFontFilePath = Path.GetFullPath(args.First());
+            string inputFilePath = Path.GetFullPath(args[1]);
+            string outputFilePath = Path.GetFullPath(args.Last());
+            if (!File.Exists(soundFontFilePath))
+            {
+                Console.WriteLine($"SoundFond file doesn't exist: {soundFontFilePath}");
+                return;
+            }
+            if (!File.Exists(inputFilePath))
+            {
+                Console.WriteLine($"Input file doesn't exist: {inputFilePath}");
+                return;
+            }
+
+            if (Path.GetExtension(soundFontFilePath) == ".sf2")
+                RenderMediaFile(soundFontFilePath, inputFilePath, outputFilePath);
+        }
+        #endregion
+
+        #region Routines
         private static WaveOutEvent PlayMediaFile(string soundFontFilePath, string inputFilePath, out int duration)
         {
             Console.WriteLine($"Play {Path.GetFileNameWithoutExtension(inputFilePath)}...");
@@ -46,9 +115,23 @@ namespace FluentMusic
                     return null;
             }
         }
-        #endregion
-
-        #region Routines
+        private static void RenderMediaFile(string soundFontFilePath, string inputFilePath, string outputFilePath)
+        {
+            Console.WriteLine($"Render {Path.GetFileNameWithoutExtension(inputFilePath)}...");
+            switch (Path.GetExtension(inputFilePath))
+            {
+                case ".fs":
+                    new Synth(soundFontFilePath).Render(File.ReadAllText(inputFilePath), outputFilePath);
+                    break;
+                case ".mid":
+                    new Synth(soundFontFilePath).RenderMIDIFile(inputFilePath, outputFilePath);
+                    break;
+                default:
+                    break;
+            }
+            Console.WriteLine($"Output saved to {outputFilePath}");
+            Console.WriteLine($"Done.");
+        }
         private static WaveOutEvent CurrentPlaying;
         private static void REPL(string soundFontFilePath)
         {
@@ -97,10 +180,15 @@ namespace FluentMusic
         }
         public static void PrintHelp()
         {
+            // remark-cz: Fluent Music version goes with Fluent Synth core version.
             Console.WriteLine("""
-                Fluent Music v0.1 Play music using score.
+                Fluent Music v0.2 Play music using score.
                 --help: Print this help information.
                 <Sound Font File>: Start REPL.
+
+                Subcommands:
+                - render
+                - play
                 """);
         }
         #endregion
