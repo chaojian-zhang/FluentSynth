@@ -157,7 +157,7 @@ Audio Editing (Exposed only through Pure Scripting):
 
 ## References
 
-Main references:
+### Main references
 
 * NAudio: https://github.com/naudio
 * Melty Synth: https://github.com/sinshu/meltysynth
@@ -169,8 +169,11 @@ Main references:
 * MIDI Instrument number: https://fmslogo.sourceforge.io/manual/midi-instrument.html
 * Guido Music Notation: https://wiki.ccarh.org/wiki/Guido_Music_Notation
 * Guido Layout Engine: https://github.com/grame-cncm/guidolib
+* Drum Channel: https://www.pgmusic.com/tutorial_gm.htm; Usage: https://github.com/sinshu/meltysynth/issues/41#issuecomment-1761619514
 
-MIDI Notes (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs)):
+### MIDI Notes
+
+(Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs))
 
 |Note Name|MIDI Number|Piano Key Number|Variable Name|Frequency (Equal tuning at 440 Hz)|
 |-|-|-|-|-|
@@ -263,7 +266,9 @@ MIDI Notes (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs)):
 |A#0/Bb0|**22**|2|`As0` or `Bb0`|*29.14*|
 |A0|**21**|1|`A0`|*27.50*|
 
-MIDI Instruments (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs)):
+### MIDI Instruments
+
+(Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs)):
 
 |Instrument|Class|MIDI Number|Variable Name|
 |-|-|-|-|
@@ -395,3 +400,88 @@ MIDI Instruments (Defined in [MusicalScore](./Core/FluentSynth/MusicalScore.cs))
 |Helicopter|**Sound Effects**|*125*|`Helicopter`|
 |Applause|**Sound Effects**|*126*|`Applause`|
 |Gunshot|**Sound Effects**|*127*|`Gunshot`|
+
+### General MIDI Drum Kit Map
+
+MIDI channel 10 (No.9) is the drum channel. On the drum channel, different notes are interpreted as different drum sounds, instead of being different pitches of a particular instrument. Instead of using Program Change messages to switch between different instruments, on the drum channel they are used to choose a drum kit. Program Change #0 is the Standard Drum Kit on most synthesizers. 
+
+Below is a reference Drum kit patch map for Standard Drum Kit (from [GM Music](https://www.pgmusic.com/tutorial_gm.htm)). Note that most synths (or sound fonts?) have additional drum sounds below and above this range of notes.
+
+|Notation|Drum Sound|Note Name|Note Number|
+|-|-|-|-|
+|**ABD**|Acoustic Bass Drum|B1|*35*|
+|**BD**|Bass Drum 1|C2|*36*|
+|**SS**|Side Stick|Db2/C#2|*37*|
+|**AS**|Acoustic Snare|D2|*38*|
+|**HC**|Hand Clap|Eb2/D#2|*39*|
+|**ES**|Electric Snare|E2|*40*|
+|**LFT**|Low Floor Tom|F2|*41*|
+|**CHH**|Closed Hi-Hat|Gb2/F#2|*42*|
+|**HFT**|High Floor Tom|G2|*43*|
+|**RHH**|Pedal Hi-Hat|Ab2/G#2|*44*|
+|**LT**|Low Tom|A2|*45*|
+|**OHH**|Open Hi-Hat|Bb2/A#2|*46*|
+|**LMT**|Low-Mid Tom|B2|*47*|
+|**HMT**|Hi-Mid Tom|C3|*48*|
+|**CC1**|Crash Cymbal 1|Db3/C#3|*49*|
+|**HT**|High Tom|D3|*50*|
+|**RC1**|Ride Cymbal 1|Eb3/D#3|*51*|
+|**CC**|Chinese Cymbal|E3|*52*|
+|**RB**|Ride Bell|F3|*53*|
+|**T**|Tambourine|Gb3/F#3|*54*|
+|**SC**|Splash Cymbal|G3|*55*|
+|**Co**|Cowbell|Ab3/G#3|*56*|
+|**CS2**|Crash Symbol 2|A3|*57*|
+|**V**|Vibraslap|Bb3/A#3|*58*|
+|**RC2**|Ride Cymbal 2|B3|*59*|
+|**HB**|Hi Bongo|C4 (middle C)|*60*|
+|**LB**|Low Bongo|Db4/C#4|*61*|
+|**MHC**|Mute Hi Conga|D4|*62*|
+|**OHC**|Open Hi Conga|Eb4/D#4|*63*|
+|**LC**|Low Conga|E4|*64*|
+|**HTi**|High Timbale|F4|*65*|
+|**LTi**|Low Timbale|Gb4/F#4|*66*|
+|**HA**|High Agogo|G4|*67*|
+|**LA**|Low Agogo|Ab4/G#4|*68*|
+|**Ca**|Cabasa|A4|*69*|
+|**M**|Maracas|Bb4/A#4|*70*|
+|**SW**|Short Whistle|B4|*71*|
+|**LW**|Long Whistle|C5|*72*|
+|**SG**|Short Guiro|Db5/D#5|*73*|
+|**LG**|Long Guiro|D5|*74*|
+|**Cl**|Claves|Eb5/D#5|*75*|
+|**HWB**|Hi Wood Block|E5|*76*|
+|**LWB**|Low Wood Block|F5|*77*|
+|**MC**|Mute Cuica|Gb5/F#5|*78*|
+|**OC**|Open Cuica|G5|*79*|
+|**MT**|Mute Triangle|Ab5/G#5|*80*|
+|**OT**|Open Triangle|A5|*81*|
+|**S**|Shaker|Bb5/A#5|*82*|
+
+Drum kits:
+
+Many General MIDI compatible synths/sound fonts have additional drum kits, often the eight listed below. Other drum kits are often similar to the Standard Drum Kit but have variations of the same drum sounds. For example, note 38 is an Acoustic Snare in the Standard Drum Kit. When you are using the Room Drum Kit, you still hear a snare with note 38 but it will be a "Room Snare".
+
+|Program #|Drum Kit|
+|-|-|
+|0|Standard Drum Kit|
+|8|Room Drum Kit|
+|16|Power Drum Kit|
+|24|Electric Drum Kit|
+|25|Rap TR808 Drums|
+|32|Jazz Drum Kit|
+|40|Brush Kit|
+
+A special note about the Brush Kit:
+
+The Brush Kit is usually the same as the Standard Drum Kit with the following three exceptions:
+
+1. Note #38 is a Brush Tap instead of a Snare Drum.
+2. Note #39 is a Brush Slap instead of a Hand Clap.
+3. Note #40 is a Brush Swirl instead of an Electric Snare Drum.
+
+Some Yamaha synths use a somewhat different map for the brush sounds. On these synths:
+
+1. Note #25 is a Brush tap.
+2. Note #27 is a Brush Slap.
+3. Note #26 is a Brush swirl.
