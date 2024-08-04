@@ -6,6 +6,10 @@ Smuggle some cheating information into the repo...
 
 ### Chords in C Major
 
+Tone feeling: Bright, familiar.
+(Quote is too long, not suited here) "For the key of C major, he gave its characteristics as “A pure, certain and decisive manner, full of innocence, earnestness, deepest religious feeling.” For the works associated with these feelings, he chose works by Mozart, Weber, Beethoven, Mendelssohn, and Haydn."
+(https://interlude.hk/feel-key-c-major/)
+
 Chords in C major:
 
 |ID|Name|Notes|
@@ -67,6 +71,8 @@ Chord Progressions In D Major:
 * I – IV – V (D – G – A)
 * I – vi – IV – V (D – Bm – G – A)
 * ii – V – I (Em7 – A7 – Dmaj7)
+
+### Chords in E Minor
 
 ## Guitar
 
